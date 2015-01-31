@@ -13,7 +13,7 @@
 /feeds
 /feeds.conf
 /files
-/packages
+/package/DslrDashboardServer
 /package/feeds
 /package/openwrt-packages
 *.orig

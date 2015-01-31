@@ -28,14 +28,14 @@ then you have a good start for menuconfig.
 (I have a few USB things inside that config, so I expect you will modify
 yours, but maybe you should first try to compile without real changes!)
 
+I have installed `ddserver`:
+
+        git clone git://github.com/hubaiz/DslrDashboardServer package/DslrDashboardServer
+
 You might want to install luci (not in this repository)
 
         ./scripts/feeds update
         ./scripts/feeds install -a -p luci
-
-And I have installed `ddserver`:
-
-        git clone git://github.com/hubaiz/DslrDashboardServer packages/DslrDashboardServer
 
 Then you can create the image with
 
