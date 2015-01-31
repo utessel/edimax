@@ -13,6 +13,7 @@
 /feeds
 /feeds.conf
 /files
+/packages
 /package/feeds
 /package/openwrt-packages
 *.orig
