@@ -43,7 +43,8 @@ Then you can create the image with
 
 When that is done, you will have the firmware files here:
 
-        bin/realtek/
+        bin/realtek/openwrt-realtek-rtl8196c-nprove-squashfs.bin
+        bin/realtek/openwrt-realtek-rtl8196c-nprove-kernel.bin
 
 Now you can upload the firmware to your router:
 
@@ -68,22 +69,34 @@ it is ok.
         put openwrt-realtek-rtl8196c-nprove-squashfs.bin
 
 Now you have to wait: this will take some time, because first the image is
-uploaded to RAM. TFTP will say its done then. But now the the checksum is 
-checked and then the flashing starts on the device. This takes more time than the tftp transfer!
-Without a serial console you won'' get any feedback here:
-Mabye Wait about 5 minutes?
-At least on my device I have to reboot it now, so press the button 
-and disconnect and reconnect the power. You don''t have to leave
-tftp for that.
+uploaded to RAM: TFTP will say its done then. But now (on the device) the the checksum is 
+checked and the real flashing starts: This takes more time than the tftp transfer! 
+So wait about 1-2 Minutes.
 
 6) Now you put the new kernel to the device: still in tftp
 
-`put openwrt-realtek-rtl8196c-nprove-kernel.bin`
+        put openwrt-realtek-rtl8196c-nprove-kernel.bin
 
 and wait again!
-This time the router will reboot itself when the flashing is done and your new image will be started:
+This time the router you get a feedback: the router will reboot when the flashing is done and your new image will be started.
+It will take some time, but finally the LED next to the button will light up. 
 
-7) Open a browser and you can connect to `http://192.168.1.1`
+7) you can login on your router now:
+
+        telnet 192.168.1.1
+
+or with your browser if you have luci:
+
+        http://192.168.1.1
+
+
+Note:
+Sometimes, my router did not load the kernel in the second step of the tftp
+upload: Without a serial console you won'' get any feedback here, maybe a
+tftp timeout. At least on my device I had to reboot it to upload the kernel:
+so press the button and disconnect and reconnect the power. 
+You don''t have to leave tftp for that.
+
 
 Serial Console
 --------------
