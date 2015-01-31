@@ -4,10 +4,10 @@ START=99
 
 start() {
         insmod /lib/modules/2.6.30.9/gpio_rtl819x.ko
-        echo 0x340c00 > /sys/module/gpio_rtl819x/parameters/rtl819x_mux
-        echo 6 > /sys/class/gpio/export
-        echo "out" > /sys/class/gpio/gpio6/direction
-        echo "0" > /sys/class/gpio/gpio6/value
+        echo 0x343c00 > /sys/module/gpio_rtl819x/parameters/rtl819x_mux
+        echo 16 > /sys/class/gpio/export
+        echo "out" > /sys/class/gpio/gpio16/direction
+        echo "0" > /sys/class/gpio/gpio16/value
 } 
 
 stop() {
