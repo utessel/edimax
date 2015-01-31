@@ -1,0 +1,82 @@
+--- a/drivers/net/wireless/rtl8192cd/8192cd_cfg.h
++++ b/drivers/net/wireless/rtl8192cd/8192cd_cfg.h
+@@ -1826,6 +1826,13 @@
+ #undef CONFIG_RTK_VLAN_SUPPORT
+ #endif
+ 
++#undef __DRAM_IN_865X
++#undef __IRAM_IN_865X
++#undef __MIPS16
++
++#define __DRAM_IN_865X  
++#define __IRAM_IN_865X  
++#define __MIPS16 
+ 
+ #endif // _8192CD_CFG_H_
+ 
+--- a/drivers/net/wireless/rtl8192cd/Makefile
++++ b/drivers/net/wireless/rtl8192cd/Makefile
+@@ -4,6 +4,7 @@
+ # Makefile for the Linux Wireless network device drivers.
+ #
+ 
++EXTRA_CFLAGS += -I$(TOPDIR)/arch/rlx
+ 
+ ifeq ($(CONFIG_RTL_92C_SUPPORT),y)
+ RTL_WLAN_DATA_DIR := data
+--- a/drivers/net/wireless/rtl8192cd/8192cd_headers.h
++++ b/drivers/net/wireless/rtl8192cd/8192cd_headers.h
+@@ -1454,7 +1454,7 @@
+ #undef EXTERN
+ 
+ 
+-#if 0
++#if 1
+ 
+ /*-----------------------------------------------------------------------------
+ 								8192cd_net80211.c
+--- a/drivers/net/wireless/rtl8192cd/8192cd_cfg.h
++++ b/drivers/net/wireless/rtl8192cd/8192cd_cfg.h
+@@ -357,7 +357,7 @@
+ //-------------------------------------------------------------
+ // WPA Supplicant 
+ //-------------------------------------------------------------
+-//#define WIFI_WPAS
++#define WIFI_WPAS
+ 
+ #ifdef WIFI_WPAS
+ #ifndef WIFI_HAPD
+@@ -525,9 +525,10 @@
+ //-------------------------------------------------------------
+ // Hostapd 
+ //-------------------------------------------------------------
+-//#ifdef CONFIG_RTL_HOSTAPD_SUPPORT 
+-//#define WIFI_HAPD
+-//#endif
++#ifdef CONFIG_RTL_HOSTAPD_SUPPORT
++#define WIFI_HAPD
++#endif
++
+ #ifdef CONFIG_RTL_P2P_SUPPORT
+ #define P2P_SUPPORT  //  support for WIFI_Direct
+ //#define P2P_DEBUGMSG
+@@ -1836,3 +1837,7 @@
+ 
+ #endif // _8192CD_CFG_H_
+ 
++#ifndef WIFI_HAPD
++#error hapd not-set
++#endif
++
+--- a/drivers/net/wireless/rtl8192cd/8192cd_led.c
++++ b/drivers/net/wireless/rtl8192cd/8192cd_led.c
+@@ -144,7 +144,8 @@
+ 			RTL_W32(LEDCFG, RTL_R32(LEDCFG) & 0xfff0ffff);
+ 	}
+ #endif	
+-	else if (GET_CHIP_VER(priv) == VERSION_8192C){
++	else if ( GET_CHIP_VER(priv) == VERSION_8192C ||
++			GET_CHIP_VER(priv) == VERSION_8188C ) {
+ 		if (flag)
+ 			RTL_W32(LEDCFG, (RTL_R32(LEDCFG) & 0xfff0ffff) | LED2SV);
+ 		else

@@ -1,0 +1,3263 @@
+--- linux-2.6.30.9/drivers/serial/8250.c	2009-10-05 18:38:08.000000000 +0300
++++ linux-2.6.30.9-rsdk/drivers/serial/8250.c	2013-05-02 01:47:55.684226900 +0300
+@@ -44,10 +44,6 @@
+ 
+ #include "8250.h"
+ 
+-#ifdef CONFIG_SPARC
+-#include "suncore.h"
+-#endif
+-
+ /*
+  * Configuration:
+  *   share_irqs - whether we pass IRQF_SHARED to request_irq().  This option
+@@ -117,13 +113,6 @@ static const struct old_serial_port old_
+ 
+ #define UART_NR	CONFIG_SERIAL_8250_NR_UARTS
+ 
+-#ifdef CONFIG_SERIAL_8250_RSA
+-
+-#define PORT_RSA_MAX 4
+-static unsigned long probe_rsa[PORT_RSA_MAX];
+-static unsigned int probe_rsa_count;
+-#endif /* CONFIG_SERIAL_8250_RSA  */
+-
+ struct uart_8250_port {
+ 	struct uart_port	port;
+ 	struct timer_list	timer;		/* "no irq" timer */
+@@ -181,196 +170,45 @@ static const struct serial8250_config ua
+ 		.fifo_size	= 1,
+ 		.tx_loadsz	= 1,
+ 	},
+-	[PORT_16450] = {
+-		.name		= "16450",
+-		.fifo_size	= 1,
+-		.tx_loadsz	= 1,
+-	},
+-	[PORT_16550] = {
+-		.name		= "16550",
+-		.fifo_size	= 1,
+-		.tx_loadsz	= 1,
+-	},
+-	[PORT_16550A] = {
+-		.name		= "16550A",
+-		.fifo_size	= 16,
+-		.tx_loadsz	= 16,
+-		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_10,
+-		.flags		= UART_CAP_FIFO,
+-	},
+-	[PORT_CIRRUS] = {
+-		.name		= "Cirrus",
+-		.fifo_size	= 1,
+-		.tx_loadsz	= 1,
+-	},
+-	[PORT_16650] = {
+-		.name		= "ST16650",
+-		.fifo_size	= 1,
+-		.tx_loadsz	= 1,
+-		.flags		= UART_CAP_FIFO | UART_CAP_EFR | UART_CAP_SLEEP,
+-	},
+-	[PORT_16650V2] = {
+-		.name		= "ST16650V2",
+-		.fifo_size	= 32,
+-		.tx_loadsz	= 16,
+-		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_01 |
+-				  UART_FCR_T_TRIG_00,
+-		.flags		= UART_CAP_FIFO | UART_CAP_EFR | UART_CAP_SLEEP,
+-	},
+-	[PORT_16750] = {
+-		.name		= "TI16750",
+-		.fifo_size	= 64,
+-		.tx_loadsz	= 64,
+-		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_10 |
+-				  UART_FCR7_64BYTE,
+-		.flags		= UART_CAP_FIFO | UART_CAP_SLEEP | UART_CAP_AFE,
+-	},
+-	[PORT_STARTECH] = {
+-		.name		= "Startech",
+-		.fifo_size	= 1,
+-		.tx_loadsz	= 1,
+-	},
+-	[PORT_16C950] = {
+-		.name		= "16C950/954",
+-		.fifo_size	= 128,
+-		.tx_loadsz	= 128,
+-		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_10,
+-		.flags		= UART_CAP_FIFO,
+-	},
++#ifdef CONFIG_SERIAL_SC16IS7X0
+ 	[PORT_16654] = {
+ 		.name		= "ST16654",
++#if 0
+ 		.fifo_size	= 64,
+ 		.tx_loadsz	= 32,
+ 		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_01 |
+ 				  UART_FCR_T_TRIG_10,
+ 		.flags		= UART_CAP_FIFO | UART_CAP_EFR | UART_CAP_SLEEP,
+-	},
+-	[PORT_16850] = {
+-		.name		= "XR16850",
+-		.fifo_size	= 128,
+-		.tx_loadsz	= 128,
+-		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_10,
+-		.flags		= UART_CAP_FIFO | UART_CAP_EFR | UART_CAP_SLEEP,
+-	},
+-	[PORT_RSA] = {
+-		.name		= "RSA",
+-		.fifo_size	= 2048,
+-		.tx_loadsz	= 2048,
+-		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_11,
+-		.flags		= UART_CAP_FIFO,
+-	},
+-	[PORT_NS16550A] = {
+-		.name		= "NS16550A",
++#else
+ 		.fifo_size	= 16,
+ 		.tx_loadsz	= 16,
+-		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_10,
+-		.flags		= UART_CAP_FIFO | UART_NATSEMI,
++		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_00,
++		.flags		= UART_CAP_FIFO,
++#endif
+ 	},
+-	[PORT_XSCALE] = {
+-		.name		= "XScale",
+-		.fifo_size	= 32,
+-		.tx_loadsz	= 32,
+-		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_10,
+-		.flags		= UART_CAP_FIFO | UART_CAP_UUE,
++#endif
++	[PORT_16550] = {
++		.name		= "16550",
++		.fifo_size	= 1,
++		.tx_loadsz	= 1,
+ 	},
+-	[PORT_RM9000] = {
+-		.name		= "RM9000",
++	[PORT_16550A] = {
++		.name		= "16550A",
+ 		.fifo_size	= 16,
+ 		.tx_loadsz	= 16,
+-		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_10,
+-		.flags		= UART_CAP_FIFO,
+-	},
+-	[PORT_OCTEON] = {
+-		.name		= "OCTEON",
+-		.fifo_size	= 64,
+-		.tx_loadsz	= 64,
+-		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_10,
++		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_00,
++#ifdef CONFIG_SERIAL_RTL8198_UART1
++		.flags		= UART_CAP_FIFO | UART_CAP_AFE,
++#else
+ 		.flags		= UART_CAP_FIFO,
++#endif
+ 	},
+ };
+ 
+-#if defined (CONFIG_SERIAL_8250_AU1X00)
+-
+-/* Au1x00 UART hardware has a weird register layout */
+-static const u8 au_io_in_map[] = {
+-	[UART_RX]  = 0,
+-	[UART_IER] = 2,
+-	[UART_IIR] = 3,
+-	[UART_LCR] = 5,
+-	[UART_MCR] = 6,
+-	[UART_LSR] = 7,
+-	[UART_MSR] = 8,
+-};
+-
+-static const u8 au_io_out_map[] = {
+-	[UART_TX]  = 1,
+-	[UART_IER] = 2,
+-	[UART_FCR] = 4,
+-	[UART_LCR] = 5,
+-	[UART_MCR] = 6,
+-};
+-
+-/* sane hardware needs no mapping */
+-static inline int map_8250_in_reg(struct uart_port *p, int offset)
+-{
+-	if (p->iotype != UPIO_AU)
+-		return offset;
+-	return au_io_in_map[offset];
+-}
+-
+-static inline int map_8250_out_reg(struct uart_port *p, int offset)
+-{
+-	if (p->iotype != UPIO_AU)
+-		return offset;
+-	return au_io_out_map[offset];
+-}
+-
+-#elif defined(CONFIG_SERIAL_8250_RM9K)
+-
+-static const u8
+-	regmap_in[8] = {
+-		[UART_RX]	= 0x00,
+-		[UART_IER]	= 0x0c,
+-		[UART_IIR]	= 0x14,
+-		[UART_LCR]	= 0x1c,
+-		[UART_MCR]	= 0x20,
+-		[UART_LSR]	= 0x24,
+-		[UART_MSR]	= 0x28,
+-		[UART_SCR]	= 0x2c
+-	},
+-	regmap_out[8] = {
+-		[UART_TX] 	= 0x04,
+-		[UART_IER]	= 0x0c,
+-		[UART_FCR]	= 0x18,
+-		[UART_LCR]	= 0x1c,
+-		[UART_MCR]	= 0x20,
+-		[UART_LSR]	= 0x24,
+-		[UART_MSR]	= 0x28,
+-		[UART_SCR]	= 0x2c
+-	};
+-
+-static inline int map_8250_in_reg(struct uart_port *p, int offset)
+-{
+-	if (p->iotype != UPIO_RM9000)
+-		return offset;
+-	return regmap_in[offset];
+-}
+-
+-static inline int map_8250_out_reg(struct uart_port *p, int offset)
+-{
+-	if (p->iotype != UPIO_RM9000)
+-		return offset;
+-	return regmap_out[offset];
+-}
+-
+-#else
+-
+ /* sane hardware needs no mapping */
+ #define map_8250_in_reg(up, offset) (offset)
+ #define map_8250_out_reg(up, offset) (offset)
+ 
+-#endif
+-
+ static unsigned int hub6_serial_in(struct uart_port *p, int offset)
+ {
+ 	offset = map_8250_in_reg(p, offset) << p->regshift;
+@@ -409,38 +247,6 @@ static unsigned int mem32_serial_in(stru
+ 	return readl(p->membase + offset);
+ }
+ 
+-#ifdef CONFIG_SERIAL_8250_AU1X00
+-static unsigned int au_serial_in(struct uart_port *p, int offset)
+-{
+-	offset = map_8250_in_reg(p, offset) << p->regshift;
+-	return __raw_readl(p->membase + offset);
+-}
+-
+-static void au_serial_out(struct uart_port *p, int offset, int value)
+-{
+-	offset = map_8250_out_reg(p, offset) << p->regshift;
+-	__raw_writel(value, p->membase + offset);
+-}
+-#endif
+-
+-static unsigned int tsi_serial_in(struct uart_port *p, int offset)
+-{
+-	unsigned int tmp;
+-	offset = map_8250_in_reg(p, offset) << p->regshift;
+-	if (offset == UART_IIR) {
+-		tmp = readl(p->membase + (UART_IIR & ~3));
+-		return (tmp >> 16) & 0xff; /* UART_IIR % 4 == 2 */
+-	} else
+-		return readb(p->membase + offset);
+-}
+-
+-static void tsi_serial_out(struct uart_port *p, int offset, int value)
+-{
+-	offset = map_8250_out_reg(p, offset) << p->regshift;
+-	if (!((offset == UART_IER) && (value & UART_IER_UUE)))
+-		writeb(value, p->membase + offset);
+-}
+-
+ static void dwapb_serial_out(struct uart_port *p, int offset, int value)
+ {
+ 	int save_offset = offset;
+@@ -451,7 +257,7 @@ static void dwapb_serial_out(struct uart
+ 		struct uart_8250_port *up = (struct uart_8250_port *)p;
+ 		up->lcr = value;
+ 	}
+-	writeb(value, p->membase + offset);
++	writel(value, p->membase + offset);
+ 	/* Read the IER to ensure any interrupt is cleared before
+ 	 * returning from ISR. */
+ 	if (save_offset == UART_TX || save_offset == UART_IER)
+@@ -470,13 +276,25 @@ static void io_serial_out(struct uart_po
+ 	outb(value, p->iobase + offset);
+ }
+ 
++#ifdef CONFIG_SERIAL_SC16IS7X0
++static unsigned int i2c_serial_in(struct uart_port *p, int offset)
++{
++	extern unsigned int serial_in_i2c(unsigned int i2c_addr, int offset);
++	return serial_in_i2c( p ->iobase, offset );
++}
++static void i2c_serial_out(struct uart_port *p, int offset, int value)
++{
++	extern unsigned int serial_out_i2c(unsigned int i2c_addr, int offset, int value);
++	serial_out_i2c( p ->iobase, offset, value );
++}
++#endif
+ static void set_io_from_upio(struct uart_port *p)
+ {
+ 	struct uart_8250_port *up = (struct uart_8250_port *)p;
+ 	switch (p->iotype) {
+-	case UPIO_HUB6:
+-		p->serial_in = hub6_serial_in;
+-		p->serial_out = hub6_serial_out;
++	case UPIO_DWAPB:
++		p->serial_in = mem32_serial_in;
++		p->serial_out = dwapb_serial_out;
+ 		break;
+ 
+ 	case UPIO_MEM:
+@@ -484,27 +302,21 @@ static void set_io_from_upio(struct uart
+ 		p->serial_out = mem_serial_out;
+ 		break;
+ 
+-	case UPIO_RM9000:
+ 	case UPIO_MEM32:
+ 		p->serial_in = mem32_serial_in;
+ 		p->serial_out = mem32_serial_out;
+ 		break;
+ 
+-#ifdef CONFIG_SERIAL_8250_AU1X00
+-	case UPIO_AU:
+-		p->serial_in = au_serial_in;
+-		p->serial_out = au_serial_out;
+-		break;
+-#endif
+-	case UPIO_TSI:
+-		p->serial_in = tsi_serial_in;
+-		p->serial_out = tsi_serial_out;
++	case UPIO_HUB6:
++		p->serial_in = hub6_serial_in;
++		p->serial_out = hub6_serial_out;
+ 		break;
+-
+-	case UPIO_DWAPB:
+-		p->serial_in = mem_serial_in;
+-		p->serial_out = dwapb_serial_out;
++#ifdef CONFIG_SERIAL_SC16IS7X0
++	case UPIO_I2C:
++		p->serial_in = i2c_serial_in;
++		p->serial_out = i2c_serial_out;
+ 		break;
++#endif
+ 
+ 	default:
+ 		p->serial_in = io_serial_in;
+@@ -520,12 +332,9 @@ serial_out_sync(struct uart_8250_port *u
+ {
+ 	struct uart_port *p = &up->port;
+ 	switch (p->iotype) {
++	case UPIO_DWAPB:
+ 	case UPIO_MEM:
+ 	case UPIO_MEM32:
+-#ifdef CONFIG_SERIAL_8250_AU1X00
+-	case UPIO_AU:
+-#endif
+-	case UPIO_DWAPB:
+ 		p->serial_out(p, offset, value);
+ 		p->serial_in(p, UART_LCR);	/* safe, no side-effects */
+ 		break;
+@@ -538,88 +347,22 @@ serial_out_sync(struct uart_8250_port *u
+ 	(up->port.serial_in(&(up)->port, (offset)))
+ #define serial_out(up, offset, value)	\
+ 	(up->port.serial_out(&(up)->port, (offset), (value)))
+-/*
+- * We used to support using pause I/O for certain machines.  We
+- * haven't supported this for a while, but just in case it's badly
+- * needed for certain old 386 machines, I've left these #define's
+- * in....
+- */
+-#define serial_inp(up, offset)		serial_in(up, offset)
+-#define serial_outp(up, offset, value)	serial_out(up, offset, value)
+ 
+ /* Uart divisor latch read */
+ static inline int _serial_dl_read(struct uart_8250_port *up)
+ {
+-	return serial_inp(up, UART_DLL) | serial_inp(up, UART_DLM) << 8;
++	return serial_in(up, UART_DLL) | serial_in(up, UART_DLM) << 8;
+ }
+ 
+ /* Uart divisor latch write */
+ static inline void _serial_dl_write(struct uart_8250_port *up, int value)
+ {
+-	serial_outp(up, UART_DLL, value & 0xff);
+-	serial_outp(up, UART_DLM, value >> 8 & 0xff);
+-}
+-
+-#if defined(CONFIG_SERIAL_8250_AU1X00)
+-/* Au1x00 haven't got a standard divisor latch */
+-static int serial_dl_read(struct uart_8250_port *up)
+-{
+-	if (up->port.iotype == UPIO_AU)
+-		return __raw_readl(up->port.membase + 0x28);
+-	else
+-		return _serial_dl_read(up);
+-}
+-
+-static void serial_dl_write(struct uart_8250_port *up, int value)
+-{
+-	if (up->port.iotype == UPIO_AU)
+-		__raw_writel(value, up->port.membase + 0x28);
+-	else
+-		_serial_dl_write(up, value);
+-}
+-#elif defined(CONFIG_SERIAL_8250_RM9K)
+-static int serial_dl_read(struct uart_8250_port *up)
+-{
+-	return	(up->port.iotype == UPIO_RM9000) ?
+-		(((__raw_readl(up->port.membase + 0x10) << 8) |
+-		(__raw_readl(up->port.membase + 0x08) & 0xff)) & 0xffff) :
+-		_serial_dl_read(up);
++	serial_out(up, UART_DLL, value & 0xff);
++	serial_out(up, UART_DLM, value >> 8 & 0xff);
+ }
+ 
+-static void serial_dl_write(struct uart_8250_port *up, int value)
+-{
+-	if (up->port.iotype == UPIO_RM9000) {
+-		__raw_writel(value, up->port.membase + 0x08);
+-		__raw_writel(value >> 8, up->port.membase + 0x10);
+-	} else {
+-		_serial_dl_write(up, value);
+-	}
+-}
+-#else
+ #define serial_dl_read(up) _serial_dl_read(up)
+ #define serial_dl_write(up, value) _serial_dl_write(up, value)
+-#endif
+-
+-/*
+- * For the 16C950
+- */
+-static void serial_icr_write(struct uart_8250_port *up, int offset, int value)
+-{
+-	serial_out(up, UART_SCR, offset);
+-	serial_out(up, UART_ICR, value);
+-}
+-
+-static unsigned int serial_icr_read(struct uart_8250_port *up, int offset)
+-{
+-	unsigned int value;
+-
+-	serial_icr_write(up, UART_ACR, up->acr | UART_ACR_ICRRD);
+-	serial_out(up, UART_SCR, offset);
+-	value = serial_in(up, UART_ICR);
+-	serial_icr_write(up, UART_ACR, up->acr);
+-
+-	return value;
+-}
+ 
+ /*
+  * FIFO support.
+@@ -627,10 +370,10 @@ static unsigned int serial_icr_read(stru
+ static void serial8250_clear_fifos(struct uart_8250_port *p)
+ {
+ 	if (p->capabilities & UART_CAP_FIFO) {
+-		serial_outp(p, UART_FCR, UART_FCR_ENABLE_FIFO);
+-		serial_outp(p, UART_FCR, UART_FCR_ENABLE_FIFO |
++		serial_out(p, UART_FCR, UART_FCR_ENABLE_FIFO);
++		serial_out(p, UART_FCR, UART_FCR_ENABLE_FIFO |
+ 			       UART_FCR_CLEAR_RCVR | UART_FCR_CLEAR_XMIT);
+-		serial_outp(p, UART_FCR, 0);
++		serial_out(p, UART_FCR, 0);
+ 	}
+ }
+ 
+@@ -643,657 +386,17 @@ static void serial8250_set_sleep(struct
+ {
+ 	if (p->capabilities & UART_CAP_SLEEP) {
+ 		if (p->capabilities & UART_CAP_EFR) {
+-			serial_outp(p, UART_LCR, 0xBF);
+-			serial_outp(p, UART_EFR, UART_EFR_ECB);
+-			serial_outp(p, UART_LCR, 0);
++			serial_out(p, UART_LCR, 0xBF);
++			serial_out(p, UART_EFR, UART_EFR_ECB);
++			serial_out(p, UART_LCR, 0);
+ 		}
+-		serial_outp(p, UART_IER, sleep ? UART_IERX_SLEEP : 0);
++		serial_out(p, UART_IER, sleep ? UART_IERX_SLEEP : 0);
+ 		if (p->capabilities & UART_CAP_EFR) {
+-			serial_outp(p, UART_LCR, 0xBF);
+-			serial_outp(p, UART_EFR, 0);
+-			serial_outp(p, UART_LCR, 0);
+-		}
+-	}
+-}
+-
+-#ifdef CONFIG_SERIAL_8250_RSA
+-/*
+- * Attempts to turn on the RSA FIFO.  Returns zero on failure.
+- * We set the port uart clock rate if we succeed.
+- */
+-static int __enable_rsa(struct uart_8250_port *up)
+-{
+-	unsigned char mode;
+-	int result;
+-
+-	mode = serial_inp(up, UART_RSA_MSR);
+-	result = mode & UART_RSA_MSR_FIFO;
+-
+-	if (!result) {
+-		serial_outp(up, UART_RSA_MSR, mode | UART_RSA_MSR_FIFO);
+-		mode = serial_inp(up, UART_RSA_MSR);
+-		result = mode & UART_RSA_MSR_FIFO;
+-	}
+-
+-	if (result)
+-		up->port.uartclk = SERIAL_RSA_BAUD_BASE * 16;
+-
+-	return result;
+-}
+-
+-static void enable_rsa(struct uart_8250_port *up)
+-{
+-	if (up->port.type == PORT_RSA) {
+-		if (up->port.uartclk != SERIAL_RSA_BAUD_BASE * 16) {
+-			spin_lock_irq(&up->port.lock);
+-			__enable_rsa(up);
+-			spin_unlock_irq(&up->port.lock);
+-		}
+-		if (up->port.uartclk == SERIAL_RSA_BAUD_BASE * 16)
+-			serial_outp(up, UART_RSA_FRR, 0);
+-	}
+-}
+-
+-/*
+- * Attempts to turn off the RSA FIFO.  Returns zero on failure.
+- * It is unknown why interrupts were disabled in here.  However,
+- * the caller is expected to preserve this behaviour by grabbing
+- * the spinlock before calling this function.
+- */
+-static void disable_rsa(struct uart_8250_port *up)
+-{
+-	unsigned char mode;
+-	int result;
+-
+-	if (up->port.type == PORT_RSA &&
+-	    up->port.uartclk == SERIAL_RSA_BAUD_BASE * 16) {
+-		spin_lock_irq(&up->port.lock);
+-
+-		mode = serial_inp(up, UART_RSA_MSR);
+-		result = !(mode & UART_RSA_MSR_FIFO);
+-
+-		if (!result) {
+-			serial_outp(up, UART_RSA_MSR, mode & ~UART_RSA_MSR_FIFO);
+-			mode = serial_inp(up, UART_RSA_MSR);
+-			result = !(mode & UART_RSA_MSR_FIFO);
+-		}
+-
+-		if (result)
+-			up->port.uartclk = SERIAL_RSA_BAUD_BASE_LO * 16;
+-		spin_unlock_irq(&up->port.lock);
+-	}
+-}
+-#endif /* CONFIG_SERIAL_8250_RSA */
+-
+-/*
+- * This is a quickie test to see how big the FIFO is.
+- * It doesn't work at all the time, more's the pity.
+- */
+-static int size_fifo(struct uart_8250_port *up)
+-{
+-	unsigned char old_fcr, old_mcr, old_lcr;
+-	unsigned short old_dl;
+-	int count;
+-
+-	old_lcr = serial_inp(up, UART_LCR);
+-	serial_outp(up, UART_LCR, 0);
+-	old_fcr = serial_inp(up, UART_FCR);
+-	old_mcr = serial_inp(up, UART_MCR);
+-	serial_outp(up, UART_FCR, UART_FCR_ENABLE_FIFO |
+-		    UART_FCR_CLEAR_RCVR | UART_FCR_CLEAR_XMIT);
+-	serial_outp(up, UART_MCR, UART_MCR_LOOP);
+-	serial_outp(up, UART_LCR, UART_LCR_DLAB);
+-	old_dl = serial_dl_read(up);
+-	serial_dl_write(up, 0x0001);
+-	serial_outp(up, UART_LCR, 0x03);
+-	for (count = 0; count < 256; count++)
+-		serial_outp(up, UART_TX, count);
+-	mdelay(20);/* FIXME - schedule_timeout */
+-	for (count = 0; (serial_inp(up, UART_LSR) & UART_LSR_DR) &&
+-	     (count < 256); count++)
+-		serial_inp(up, UART_RX);
+-	serial_outp(up, UART_FCR, old_fcr);
+-	serial_outp(up, UART_MCR, old_mcr);
+-	serial_outp(up, UART_LCR, UART_LCR_DLAB);
+-	serial_dl_write(up, old_dl);
+-	serial_outp(up, UART_LCR, old_lcr);
+-
+-	return count;
+-}
+-
+-/*
+- * Read UART ID using the divisor method - set DLL and DLM to zero
+- * and the revision will be in DLL and device type in DLM.  We
+- * preserve the device state across this.
+- */
+-static unsigned int autoconfig_read_divisor_id(struct uart_8250_port *p)
+-{
+-	unsigned char old_dll, old_dlm, old_lcr;
+-	unsigned int id;
+-
+-	old_lcr = serial_inp(p, UART_LCR);
+-	serial_outp(p, UART_LCR, UART_LCR_DLAB);
+-
+-	old_dll = serial_inp(p, UART_DLL);
+-	old_dlm = serial_inp(p, UART_DLM);
+-
+-	serial_outp(p, UART_DLL, 0);
+-	serial_outp(p, UART_DLM, 0);
+-
+-	id = serial_inp(p, UART_DLL) | serial_inp(p, UART_DLM) << 8;
+-
+-	serial_outp(p, UART_DLL, old_dll);
+-	serial_outp(p, UART_DLM, old_dlm);
+-	serial_outp(p, UART_LCR, old_lcr);
+-
+-	return id;
+-}
+-
+-/*
+- * This is a helper routine to autodetect StarTech/Exar/Oxsemi UART's.
+- * When this function is called we know it is at least a StarTech
+- * 16650 V2, but it might be one of several StarTech UARTs, or one of
+- * its clones.  (We treat the broken original StarTech 16650 V1 as a
+- * 16550, and why not?  Startech doesn't seem to even acknowledge its
+- * existence.)
+- *
+- * What evil have men's minds wrought...
+- */
+-static void autoconfig_has_efr(struct uart_8250_port *up)
+-{
+-	unsigned int id1, id2, id3, rev;
+-
+-	/*
+-	 * Everything with an EFR has SLEEP
+-	 */
+-	up->capabilities |= UART_CAP_EFR | UART_CAP_SLEEP;
+-
+-	/*
+-	 * First we check to see if it's an Oxford Semiconductor UART.
+-	 *
+-	 * If we have to do this here because some non-National
+-	 * Semiconductor clone chips lock up if you try writing to the
+-	 * LSR register (which serial_icr_read does)
+-	 */
+-
+-	/*
+-	 * Check for Oxford Semiconductor 16C950.
+-	 *
+-	 * EFR [4] must be set else this test fails.
+-	 *
+-	 * This shouldn't be necessary, but Mike Hudson (Exoray@isys.ca)
+-	 * claims that it's needed for 952 dual UART's (which are not
+-	 * recommended for new designs).
+-	 */
+-	up->acr = 0;
+-	serial_out(up, UART_LCR, 0xBF);
+-	serial_out(up, UART_EFR, UART_EFR_ECB);
+-	serial_out(up, UART_LCR, 0x00);
+-	id1 = serial_icr_read(up, UART_ID1);
+-	id2 = serial_icr_read(up, UART_ID2);
+-	id3 = serial_icr_read(up, UART_ID3);
+-	rev = serial_icr_read(up, UART_REV);
+-
+-	DEBUG_AUTOCONF("950id=%02x:%02x:%02x:%02x ", id1, id2, id3, rev);
+-
+-	if (id1 == 0x16 && id2 == 0xC9 &&
+-	    (id3 == 0x50 || id3 == 0x52 || id3 == 0x54)) {
+-		up->port.type = PORT_16C950;
+-
+-		/*
+-		 * Enable work around for the Oxford Semiconductor 952 rev B
+-		 * chip which causes it to seriously miscalculate baud rates
+-		 * when DLL is 0.
+-		 */
+-		if (id3 == 0x52 && rev == 0x01)
+-			up->bugs |= UART_BUG_QUOT;
+-		return;
+-	}
+-
+-	/*
+-	 * We check for a XR16C850 by setting DLL and DLM to 0, and then
+-	 * reading back DLL and DLM.  The chip type depends on the DLM
+-	 * value read back:
+-	 *  0x10 - XR16C850 and the DLL contains the chip revision.
+-	 *  0x12 - XR16C2850.
+-	 *  0x14 - XR16C854.
+-	 */
+-	id1 = autoconfig_read_divisor_id(up);
+-	DEBUG_AUTOCONF("850id=%04x ", id1);
+-
+-	id2 = id1 >> 8;
+-	if (id2 == 0x10 || id2 == 0x12 || id2 == 0x14) {
+-		up->port.type = PORT_16850;
+-		return;
+-	}
+-
+-	/*
+-	 * It wasn't an XR16C850.
+-	 *
+-	 * We distinguish between the '654 and the '650 by counting
+-	 * how many bytes are in the FIFO.  I'm using this for now,
+-	 * since that's the technique that was sent to me in the
+-	 * serial driver update, but I'm not convinced this works.
+-	 * I've had problems doing this in the past.  -TYT
+-	 */
+-	if (size_fifo(up) == 64)
+-		up->port.type = PORT_16654;
+-	else
+-		up->port.type = PORT_16650V2;
+-}
+-
+-/*
+- * We detected a chip without a FIFO.  Only two fall into
+- * this category - the original 8250 and the 16450.  The
+- * 16450 has a scratch register (accessible with LCR=0)
+- */
+-static void autoconfig_8250(struct uart_8250_port *up)
+-{
+-	unsigned char scratch, status1, status2;
+-
+-	up->port.type = PORT_8250;
+-
+-	scratch = serial_in(up, UART_SCR);
+-	serial_outp(up, UART_SCR, 0xa5);
+-	status1 = serial_in(up, UART_SCR);
+-	serial_outp(up, UART_SCR, 0x5a);
+-	status2 = serial_in(up, UART_SCR);
+-	serial_outp(up, UART_SCR, scratch);
+-
+-	if (status1 == 0xa5 && status2 == 0x5a)
+-		up->port.type = PORT_16450;
+-}
+-
+-static int broken_efr(struct uart_8250_port *up)
+-{
+-	/*
+-	 * Exar ST16C2550 "A2" devices incorrectly detect as
+-	 * having an EFR, and report an ID of 0x0201.  See
+-	 * http://www.exar.com/info.php?pdf=dan180_oct2004.pdf
+-	 */
+-	if (autoconfig_read_divisor_id(up) == 0x0201 && size_fifo(up) == 16)
+-		return 1;
+-
+-	return 0;
+-}
+-
+-/*
+- * We know that the chip has FIFOs.  Does it have an EFR?  The
+- * EFR is located in the same register position as the IIR and
+- * we know the top two bits of the IIR are currently set.  The
+- * EFR should contain zero.  Try to read the EFR.
+- */
+-static void autoconfig_16550a(struct uart_8250_port *up)
+-{
+-	unsigned char status1, status2;
+-	unsigned int iersave;
+-
+-	up->port.type = PORT_16550A;
+-	up->capabilities |= UART_CAP_FIFO;
+-
+-	/*
+-	 * Check for presence of the EFR when DLAB is set.
+-	 * Only ST16C650V1 UARTs pass this test.
+-	 */
+-	serial_outp(up, UART_LCR, UART_LCR_DLAB);
+-	if (serial_in(up, UART_EFR) == 0) {
+-		serial_outp(up, UART_EFR, 0xA8);
+-		if (serial_in(up, UART_EFR) != 0) {
+-			DEBUG_AUTOCONF("EFRv1 ");
+-			up->port.type = PORT_16650;
+-			up->capabilities |= UART_CAP_EFR | UART_CAP_SLEEP;
+-		} else {
+-			DEBUG_AUTOCONF("Motorola 8xxx DUART ");
+-		}
+-		serial_outp(up, UART_EFR, 0);
+-		return;
+-	}
+-
+-	/*
+-	 * Maybe it requires 0xbf to be written to the LCR.
+-	 * (other ST16C650V2 UARTs, TI16C752A, etc)
+-	 */
+-	serial_outp(up, UART_LCR, 0xBF);
+-	if (serial_in(up, UART_EFR) == 0 && !broken_efr(up)) {
+-		DEBUG_AUTOCONF("EFRv2 ");
+-		autoconfig_has_efr(up);
+-		return;
++			serial_out(p, UART_LCR, 0xBF);
++			serial_out(p, UART_EFR, 0);
++			serial_out(p, UART_LCR, 0);
+ 	}
+-
+-	/*
+-	 * Check for a National Semiconductor SuperIO chip.
+-	 * Attempt to switch to bank 2, read the value of the LOOP bit
+-	 * from EXCR1. Switch back to bank 0, change it in MCR. Then
+-	 * switch back to bank 2, read it from EXCR1 again and check
+-	 * it's changed. If so, set baud_base in EXCR2 to 921600. -- dwmw2
+-	 */
+-	serial_outp(up, UART_LCR, 0);
+-	status1 = serial_in(up, UART_MCR);
+-	serial_outp(up, UART_LCR, 0xE0);
+-	status2 = serial_in(up, 0x02); /* EXCR1 */
+-
+-	if (!((status2 ^ status1) & UART_MCR_LOOP)) {
+-		serial_outp(up, UART_LCR, 0);
+-		serial_outp(up, UART_MCR, status1 ^ UART_MCR_LOOP);
+-		serial_outp(up, UART_LCR, 0xE0);
+-		status2 = serial_in(up, 0x02); /* EXCR1 */
+-		serial_outp(up, UART_LCR, 0);
+-		serial_outp(up, UART_MCR, status1);
+-
+-		if ((status2 ^ status1) & UART_MCR_LOOP) {
+-			unsigned short quot;
+-
+-			serial_outp(up, UART_LCR, 0xE0);
+-
+-			quot = serial_dl_read(up);
+-			quot <<= 3;
+-
+-			status1 = serial_in(up, 0x04); /* EXCR2 */
+-			status1 &= ~0xB0; /* Disable LOCK, mask out PRESL[01] */
+-			status1 |= 0x10;  /* 1.625 divisor for baud_base --> 921600 */
+-			serial_outp(up, 0x04, status1);
+-
+-			serial_dl_write(up, quot);
+-
+-			serial_outp(up, UART_LCR, 0);
+-
+-			up->port.uartclk = 921600*16;
+-			up->port.type = PORT_NS16550A;
+-			up->capabilities |= UART_NATSEMI;
+-			return;
+-		}
+-	}
+-
+-	/*
+-	 * No EFR.  Try to detect a TI16750, which only sets bit 5 of
+-	 * the IIR when 64 byte FIFO mode is enabled when DLAB is set.
+-	 * Try setting it with and without DLAB set.  Cheap clones
+-	 * set bit 5 without DLAB set.
+-	 */
+-	serial_outp(up, UART_LCR, 0);
+-	serial_outp(up, UART_FCR, UART_FCR_ENABLE_FIFO | UART_FCR7_64BYTE);
+-	status1 = serial_in(up, UART_IIR) >> 5;
+-	serial_outp(up, UART_FCR, UART_FCR_ENABLE_FIFO);
+-	serial_outp(up, UART_LCR, UART_LCR_DLAB);
+-	serial_outp(up, UART_FCR, UART_FCR_ENABLE_FIFO | UART_FCR7_64BYTE);
+-	status2 = serial_in(up, UART_IIR) >> 5;
+-	serial_outp(up, UART_FCR, UART_FCR_ENABLE_FIFO);
+-	serial_outp(up, UART_LCR, 0);
+-
+-	DEBUG_AUTOCONF("iir1=%d iir2=%d ", status1, status2);
+-
+-	if (status1 == 6 && status2 == 7) {
+-		up->port.type = PORT_16750;
+-		up->capabilities |= UART_CAP_AFE | UART_CAP_SLEEP;
+-		return;
+-	}
+-
+-	/*
+-	 * Try writing and reading the UART_IER_UUE bit (b6).
+-	 * If it works, this is probably one of the Xscale platform's
+-	 * internal UARTs.
+-	 * We're going to explicitly set the UUE bit to 0 before
+-	 * trying to write and read a 1 just to make sure it's not
+-	 * already a 1 and maybe locked there before we even start start.
+-	 */
+-	iersave = serial_in(up, UART_IER);
+-	serial_outp(up, UART_IER, iersave & ~UART_IER_UUE);
+-	if (!(serial_in(up, UART_IER) & UART_IER_UUE)) {
+-		/*
+-		 * OK it's in a known zero state, try writing and reading
+-		 * without disturbing the current state of the other bits.
+-		 */
+-		serial_outp(up, UART_IER, iersave | UART_IER_UUE);
+-		if (serial_in(up, UART_IER) & UART_IER_UUE) {
+-			/*
+-			 * It's an Xscale.
+-			 * We'll leave the UART_IER_UUE bit set to 1 (enabled).
+-			 */
+-			DEBUG_AUTOCONF("Xscale ");
+-			up->port.type = PORT_XSCALE;
+-			up->capabilities |= UART_CAP_UUE;
+-			return;
+-		}
+-	} else {
+-		/*
+-		 * If we got here we couldn't force the IER_UUE bit to 0.
+-		 * Log it and continue.
+-		 */
+-		DEBUG_AUTOCONF("Couldn't force IER_UUE to 0 ");
+-	}
+-	serial_outp(up, UART_IER, iersave);
+-}
+-
+-/*
+- * This routine is called by rs_init() to initialize a specific serial
+- * port.  It determines what type of UART chip this serial port is
+- * using: 8250, 16450, 16550, 16550A.  The important question is
+- * whether or not this UART is a 16550A or not, since this will
+- * determine whether or not we can use its FIFO features or not.
+- */
+-static void autoconfig(struct uart_8250_port *up, unsigned int probeflags)
+-{
+-	unsigned char status1, scratch, scratch2, scratch3;
+-	unsigned char save_lcr, save_mcr;
+-	unsigned long flags;
+-
+-	if (!up->port.iobase && !up->port.mapbase && !up->port.membase)
+-		return;
+-
+-	DEBUG_AUTOCONF("ttyS%d: autoconf (0x%04x, 0x%p): ",
+-		       serial_index(&up->port), up->port.iobase, up->port.membase);
+-
+-	/*
+-	 * We really do need global IRQs disabled here - we're going to
+-	 * be frobbing the chips IRQ enable register to see if it exists.
+-	 */
+-	spin_lock_irqsave(&up->port.lock, flags);
+-
+-	up->capabilities = 0;
+-	up->bugs = 0;
+-
+-	if (!(up->port.flags & UPF_BUGGY_UART)) {
+-		/*
+-		 * Do a simple existence test first; if we fail this,
+-		 * there's no point trying anything else.
+-		 *
+-		 * 0x80 is used as a nonsense port to prevent against
+-		 * false positives due to ISA bus float.  The
+-		 * assumption is that 0x80 is a non-existent port;
+-		 * which should be safe since include/asm/io.h also
+-		 * makes this assumption.
+-		 *
+-		 * Note: this is safe as long as MCR bit 4 is clear
+-		 * and the device is in "PC" mode.
+-		 */
+-		scratch = serial_inp(up, UART_IER);
+-		serial_outp(up, UART_IER, 0);
+-#ifdef __i386__
+-		outb(0xff, 0x080);
+-#endif
+-		/*
+-		 * Mask out IER[7:4] bits for test as some UARTs (e.g. TL
+-		 * 16C754B) allow only to modify them if an EFR bit is set.
+-		 */
+-		scratch2 = serial_inp(up, UART_IER) & 0x0f;
+-		serial_outp(up, UART_IER, 0x0F);
+-#ifdef __i386__
+-		outb(0, 0x080);
+-#endif
+-		scratch3 = serial_inp(up, UART_IER) & 0x0f;
+-		serial_outp(up, UART_IER, scratch);
+-		if (scratch2 != 0 || scratch3 != 0x0F) {
+-			/*
+-			 * We failed; there's nothing here
+-			 */
+-			DEBUG_AUTOCONF("IER test failed (%02x, %02x) ",
+-				       scratch2, scratch3);
+-			goto out;
+-		}
+-	}
+-
+-	save_mcr = serial_in(up, UART_MCR);
+-	save_lcr = serial_in(up, UART_LCR);
+-
+-	/*
+-	 * Check to see if a UART is really there.  Certain broken
+-	 * internal modems based on the Rockwell chipset fail this
+-	 * test, because they apparently don't implement the loopback
+-	 * test mode.  So this test is skipped on the COM 1 through
+-	 * COM 4 ports.  This *should* be safe, since no board
+-	 * manufacturer would be stupid enough to design a board
+-	 * that conflicts with COM 1-4 --- we hope!
+-	 */
+-	if (!(up->port.flags & UPF_SKIP_TEST)) {
+-		serial_outp(up, UART_MCR, UART_MCR_LOOP | 0x0A);
+-		status1 = serial_inp(up, UART_MSR) & 0xF0;
+-		serial_outp(up, UART_MCR, save_mcr);
+-		if (status1 != 0x90) {
+-			DEBUG_AUTOCONF("LOOP test failed (%02x) ",
+-				       status1);
+-			goto out;
+-		}
+-	}
+-
+-	/*
+-	 * We're pretty sure there's a port here.  Lets find out what
+-	 * type of port it is.  The IIR top two bits allows us to find
+-	 * out if it's 8250 or 16450, 16550, 16550A or later.  This
+-	 * determines what we test for next.
+-	 *
+-	 * We also initialise the EFR (if any) to zero for later.  The
+-	 * EFR occupies the same register location as the FCR and IIR.
+-	 */
+-	serial_outp(up, UART_LCR, 0xBF);
+-	serial_outp(up, UART_EFR, 0);
+-	serial_outp(up, UART_LCR, 0);
+-
+-	serial_outp(up, UART_FCR, UART_FCR_ENABLE_FIFO);
+-	scratch = serial_in(up, UART_IIR) >> 6;
+-
+-	DEBUG_AUTOCONF("iir=%d ", scratch);
+-
+-	switch (scratch) {
+-	case 0:
+-		autoconfig_8250(up);
+-		break;
+-	case 1:
+-		up->port.type = PORT_UNKNOWN;
+-		break;
+-	case 2:
+-		up->port.type = PORT_16550;
+-		break;
+-	case 3:
+-		autoconfig_16550a(up);
+-		break;
+-	}
+-
+-#ifdef CONFIG_SERIAL_8250_RSA
+-	/*
+-	 * Only probe for RSA ports if we got the region.
+-	 */
+-	if (up->port.type == PORT_16550A && probeflags & PROBE_RSA) {
+-		int i;
+-
+-		for (i = 0 ; i < probe_rsa_count; ++i) {
+-			if (probe_rsa[i] == up->port.iobase &&
+-			    __enable_rsa(up)) {
+-				up->port.type = PORT_RSA;
+-				break;
+-			}
+-		}
+-	}
+-#endif
+-
+-#ifdef CONFIG_SERIAL_8250_AU1X00
+-	/* if access method is AU, it is a 16550 with a quirk */
+-	if (up->port.type == PORT_16550A && up->port.iotype == UPIO_AU)
+-		up->bugs |= UART_BUG_NOMSR;
+-#endif
+-
+-	serial_outp(up, UART_LCR, save_lcr);
+-
+-	if (up->capabilities != uart_config[up->port.type].flags) {
+-		printk(KERN_WARNING
+-		       "ttyS%d: detected caps %08x should be %08x\n",
+-		       serial_index(&up->port), up->capabilities,
+-		       uart_config[up->port.type].flags);
+-	}
+-
+-	up->port.fifosize = uart_config[up->port.type].fifo_size;
+-	up->capabilities = uart_config[up->port.type].flags;
+-	up->tx_loadsz = uart_config[up->port.type].tx_loadsz;
+-
+-	if (up->port.type == PORT_UNKNOWN)
+-		goto out;
+-
+-	/*
+-	 * Reset the UART.
+-	 */
+-#ifdef CONFIG_SERIAL_8250_RSA
+-	if (up->port.type == PORT_RSA)
+-		serial_outp(up, UART_RSA_FRR, 0);
+-#endif
+-	serial_outp(up, UART_MCR, save_mcr);
+-	serial8250_clear_fifos(up);
+-	serial_in(up, UART_RX);
+-	if (up->capabilities & UART_CAP_UUE)
+-		serial_outp(up, UART_IER, UART_IER_UUE);
+-	else
+-		serial_outp(up, UART_IER, 0);
+-
+- out:
+-	spin_unlock_irqrestore(&up->port.lock, flags);
+-	DEBUG_AUTOCONF("type=%s\n", uart_config[up->port.type].name);
+-}
+-
+-static void autoconfig_irq(struct uart_8250_port *up)
+-{
+-	unsigned char save_mcr, save_ier;
+-	unsigned char save_ICP = 0;
+-	unsigned int ICP = 0;
+-	unsigned long irqs;
+-	int irq;
+-
+-	if (up->port.flags & UPF_FOURPORT) {
+-		ICP = (up->port.iobase & 0xfe0) | 0x1f;
+-		save_ICP = inb_p(ICP);
+-		outb_p(0x80, ICP);
+-		(void) inb_p(ICP);
+-	}
+-
+-	/* forget possible initially masked and pending IRQ */
+-	probe_irq_off(probe_irq_on());
+-	save_mcr = serial_inp(up, UART_MCR);
+-	save_ier = serial_inp(up, UART_IER);
+-	serial_outp(up, UART_MCR, UART_MCR_OUT1 | UART_MCR_OUT2);
+-
+-	irqs = probe_irq_on();
+-	serial_outp(up, UART_MCR, 0);
+-	udelay(10);
+-	if (up->port.flags & UPF_FOURPORT) {
+-		serial_outp(up, UART_MCR,
+-			    UART_MCR_DTR | UART_MCR_RTS);
+-	} else {
+-		serial_outp(up, UART_MCR,
+-			    UART_MCR_DTR | UART_MCR_RTS | UART_MCR_OUT2);
+ 	}
+-	serial_outp(up, UART_IER, 0x0f);	/* enable all intrs */
+-	(void)serial_inp(up, UART_LSR);
+-	(void)serial_inp(up, UART_RX);
+-	(void)serial_inp(up, UART_IIR);
+-	(void)serial_inp(up, UART_MSR);
+-	serial_outp(up, UART_TX, 0xFF);
+-	udelay(20);
+-	irq = probe_irq_off(irqs);
+-
+-	serial_outp(up, UART_MCR, save_mcr);
+-	serial_outp(up, UART_IER, save_ier);
+-
+-	if (up->port.flags & UPF_FOURPORT)
+-		outb_p(save_ICP, ICP);
+-
+-	up->port.irq = (irq > 0) ? irq : 0;
+ }
+ 
+ static inline void __stop_tx(struct uart_8250_port *p)
+@@ -1309,14 +412,6 @@ static void serial8250_stop_tx(struct ua
+ 	struct uart_8250_port *up = (struct uart_8250_port *)port;
+ 
+ 	__stop_tx(up);
+-
+-	/*
+-	 * We really want to stop the transmitter from sending.
+-	 */
+-	if (up->port.type == PORT_16C950) {
+-		up->acr |= UART_ACR_TXDIS;
+-		serial_icr_write(up, UART_ACR, up->acr);
+-	}
+ }
+ 
+ static void transmit_chars(struct uart_8250_port *up);
+@@ -1341,14 +436,6 @@ static void serial8250_start_tx(struct u
+ 				transmit_chars(up);
+ 		}
+ 	}
+-
+-	/*
+-	 * Re-enable the transmitter if we disabled it.
+-	 */
+-	if (up->port.type == PORT_16C950 && up->acr & UART_ACR_TXDIS) {
+-		up->acr &= ~UART_ACR_TXDIS;
+-		serial_icr_write(up, UART_ACR, up->acr);
+-	}
+ }
+ 
+ static void serial8250_stop_rx(struct uart_port *port)
+@@ -1382,7 +469,7 @@ receive_chars(struct uart_8250_port *up,
+ 
+ 	do {
+ 		if (likely(lsr & UART_LSR_DR))
+-			ch = serial_inp(up, UART_RX);
++			ch = serial_in(up, UART_RX);
+ 		else
+ 			/*
+ 			 * Intel 82571 has a Serial Over Lan device that will
+@@ -1440,7 +527,7 @@ receive_chars(struct uart_8250_port *up,
+ 		uart_insert_char(&up->port, lsr, UART_LSR_OE, ch, flag);
+ 
+ ignore_char:
+-		lsr = serial_inp(up, UART_LSR);
++		lsr = serial_in(up, UART_LSR);
+ 	} while ((lsr & (UART_LSR_DR | UART_LSR_BI)) && (max_count-- > 0));
+ 	spin_unlock(&up->port.lock);
+ 	tty_flip_buffer_push(tty);
+@@ -1454,7 +541,7 @@ static void transmit_chars(struct uart_8
+ 	int count;
+ 
+ 	if (up->port.x_char) {
+-		serial_outp(up, UART_TX, up->port.x_char);
++		serial_out(up, UART_TX, up->port.x_char);
+ 		up->port.icount.tx++;
+ 		up->port.x_char = 0;
+ 		return;
+@@ -1519,7 +606,7 @@ static void serial8250_handle_port(struc
+ 
+ 	spin_lock_irqsave(&up->port.lock, flags);
+ 
+-	status = serial_inp(up, UART_LSR);
++	status = serial_in(up, UART_LSR);
+ 
+ 	DEBUG_INTR("status = %x...", status);
+ 
+@@ -1552,6 +639,11 @@ static irqreturn_t serial8250_interrupt(
+ 	struct list_head *l, *end = NULL;
+ 	int pass_counter = 0, handled = 0;
+ 
++#ifdef CONFIG_SERIAL_SC16IS7X0
++	extern int sc16is7x0_clean_interrupt( int irq );
++	if( sc16is7x0_clean_interrupt( irq ) < 0 )
++		return IRQ_RETVAL(handled);
++#endif
+ 	DEBUG_INTR("serial8250_interrupt(%d)...", irq);
+ 
+ 	spin_lock(&i->lock);
+@@ -1635,7 +727,8 @@ static int serial_link_irq_chain(struct
+ 	struct hlist_head *h;
+ 	struct hlist_node *n;
+ 	struct irq_info *i;
+-	int ret, irq_flags = up->port.flags & UPF_SHARE_IRQ ? IRQF_SHARED : 0;
++//	int ret, irq_flags = up->port.flags & UPF_SHARE_IRQ ? IRQF_SHARED : 0;
++	int ret, irq_flags = up->port.flags & UPF_SHARE_IRQ ? IRQF_SHARED : IRQF_DISABLED;
+ 
+ 	mutex_lock(&hash_mutex);
+ 
+@@ -1682,7 +775,7 @@ static int serial_link_irq_chain(struct
+ 
+ static void serial_unlink_irq_chain(struct uart_8250_port *up)
+ {
+-	struct irq_info *i;
++	struct irq_info *i=NULL;
+ 	struct hlist_node *n;
+ 	struct hlist_head *h;
+ 
+@@ -1886,12 +979,12 @@ static void wait_for_xmitr(struct uart_8
+ static int serial8250_get_poll_char(struct uart_port *port)
+ {
+ 	struct uart_8250_port *up = (struct uart_8250_port *)port;
+-	unsigned char lsr = serial_inp(up, UART_LSR);
++	unsigned char lsr = serial_in(up, UART_LSR);
+ 
+ 	while (!(lsr & UART_LSR_DR))
+-		lsr = serial_inp(up, UART_LSR);
++		lsr = serial_in(up, UART_LSR);
+ 
+-	return serial_inp(up, UART_RX);
++	return serial_in(up, UART_RX);
+ }
+ 
+ 
+@@ -1944,27 +1037,6 @@ static int serial8250_startup(struct uar
+ 	if (up->port.iotype != up->cur_iotype)
+ 		set_io_from_upio(port);
+ 
+-	if (up->port.type == PORT_16C950) {
+-		/* Wake up and initialize UART */
+-		up->acr = 0;
+-		serial_outp(up, UART_LCR, 0xBF);
+-		serial_outp(up, UART_EFR, UART_EFR_ECB);
+-		serial_outp(up, UART_IER, 0);
+-		serial_outp(up, UART_LCR, 0);
+-		serial_icr_write(up, UART_CSR, 0); /* Reset the UART */
+-		serial_outp(up, UART_LCR, 0xBF);
+-		serial_outp(up, UART_EFR, UART_EFR_ECB);
+-		serial_outp(up, UART_LCR, 0);
+-	}
+-
+-#ifdef CONFIG_SERIAL_8250_RSA
+-	/*
+-	 * If this is an RSA port, see if we can kick it up to the
+-	 * higher speed clock.
+-	 */
+-	enable_rsa(up);
+-#endif
+-
+ 	/*
+ 	 * Clear the FIFO buffers and disable them.
+ 	 * (they will be reenabled in set_termios())
+@@ -1974,10 +1046,10 @@ static int serial8250_startup(struct uar
+ 	/*
+ 	 * Clear the interrupt registers.
+ 	 */
+-	(void) serial_inp(up, UART_LSR);
+-	(void) serial_inp(up, UART_RX);
+-	(void) serial_inp(up, UART_IIR);
+-	(void) serial_inp(up, UART_MSR);
++	(void) serial_in(up, UART_LSR);
++	(void) serial_in(up, UART_RX);
++	(void) serial_in(up, UART_IIR);
++	(void) serial_in(up, UART_MSR);
+ 
+ 	/*
+ 	 * At this point, there's no way the LSR could still be 0xff;
+@@ -1985,29 +1057,12 @@ static int serial8250_startup(struct uar
+ 	 * here.
+ 	 */
+ 	if (!(up->port.flags & UPF_BUGGY_UART) &&
+-	    (serial_inp(up, UART_LSR) == 0xff)) {
++	    (serial_in(up, UART_LSR) == 0xff)) {
+ 		printk(KERN_INFO "ttyS%d: LSR safety check engaged!\n",
+ 		       serial_index(&up->port));
+ 		return -ENODEV;
+ 	}
+ 
+-	/*
+-	 * For a XR16C850, we need to set the trigger levels
+-	 */
+-	if (up->port.type == PORT_16850) {
+-		unsigned char fctr;
+-
+-		serial_outp(up, UART_LCR, 0xbf);
+-
+-		fctr = serial_inp(up, UART_FCTR) & ~(UART_FCTR_RX|UART_FCTR_TX);
+-		serial_outp(up, UART_FCTR, fctr | UART_FCTR_TRGD | UART_FCTR_RX);
+-		serial_outp(up, UART_TRG, UART_TRG_96);
+-		serial_outp(up, UART_FCTR, fctr | UART_FCTR_TRGD | UART_FCTR_TX);
+-		serial_outp(up, UART_TRG, UART_TRG_96);
+-
+-		serial_outp(up, UART_LCR, 0);
+-	}
+-
+ 	if (is_real_interrupt(up->port.irq)) {
+ 		unsigned char iir1;
+ 		/*
+@@ -2075,13 +1130,9 @@ static int serial8250_startup(struct uar
+ 	/*
+ 	 * Now, initialize the UART
+ 	 */
+-	serial_outp(up, UART_LCR, UART_LCR_WLEN8);
++	serial_out(up, UART_LCR, UART_LCR_WLEN8);
+ 
+ 	spin_lock_irqsave(&up->port.lock, flags);
+-	if (up->port.flags & UPF_FOURPORT) {
+-		if (!is_real_interrupt(up->port.irq))
+-			up->port.mctrl |= TIOCM_OUT1;
+-	} else
+ 		/*
+ 		 * Most PC uarts need OUT2 raised to enable interrupts.
+ 		 */
+@@ -2108,10 +1159,10 @@ static int serial8250_startup(struct uar
+ 	 * Do a quick test to see if we receive an
+ 	 * interrupt when we enable the TX irq.
+ 	 */
+-	serial_outp(up, UART_IER, UART_IER_THRI);
++	serial_out(up, UART_IER, UART_IER_THRI);
+ 	lsr = serial_in(up, UART_LSR);
+ 	iir = serial_in(up, UART_IIR);
+-	serial_outp(up, UART_IER, 0);
++	serial_out(up, UART_IER, 0);
+ 
+ 	if (lsr & UART_LSR_TEMT && iir & UART_IIR_NO_INT) {
+ 		if (!(up->bugs & UART_BUG_TXEN)) {
+@@ -2131,10 +1182,10 @@ dont_test_tx_en:
+ 	 * saved flags to avoid getting false values from polling
+ 	 * routines or the previous session.
+ 	 */
+-	serial_inp(up, UART_LSR);
+-	serial_inp(up, UART_RX);
+-	serial_inp(up, UART_IIR);
+-	serial_inp(up, UART_MSR);
++	serial_in(up, UART_LSR);
++	serial_in(up, UART_RX);
++	serial_in(up, UART_IIR);
++	serial_in(up, UART_MSR);
+ 	up->lsr_saved_flags = 0;
+ 	up->msr_saved_flags = 0;
+ 
+@@ -2144,17 +1195,7 @@ dont_test_tx_en:
+ 	 * anyway, so we don't enable them here.
+ 	 */
+ 	up->ier = UART_IER_RLSI | UART_IER_RDI;
+-	serial_outp(up, UART_IER, up->ier);
+-
+-	if (up->port.flags & UPF_FOURPORT) {
+-		unsigned int icp;
+-		/*
+-		 * Enable interrupts on the AST Fourport board
+-		 */
+-		icp = (up->port.iobase & 0xfe0) | 0x01f;
+-		outb_p(0x80, icp);
+-		(void) inb_p(icp);
+-	}
++	serial_out(up, UART_IER, up->ier);
+ 
+ 	return 0;
+ }
+@@ -2168,14 +1209,9 @@ static void serial8250_shutdown(struct u
+ 	 * Disable interrupts from this port
+ 	 */
+ 	up->ier = 0;
+-	serial_outp(up, UART_IER, 0);
++	serial_out(up, UART_IER, 0);
+ 
+ 	spin_lock_irqsave(&up->port.lock, flags);
+-	if (up->port.flags & UPF_FOURPORT) {
+-		/* reset interrupts on the AST Fourport board */
+-		inb((up->port.iobase & 0xfe0) | 0x1f);
+-		up->port.mctrl |= TIOCM_OUT1;
+-	} else
+ 		up->port.mctrl &= ~TIOCM_OUT2;
+ 
+ 	serial8250_set_mctrl(&up->port, up->port.mctrl);
+@@ -2184,16 +1220,9 @@ static void serial8250_shutdown(struct u
+ 	/*
+ 	 * Disable break condition and FIFOs
+ 	 */
+-	serial_out(up, UART_LCR, serial_inp(up, UART_LCR) & ~UART_LCR_SBC);
++	serial_out(up, UART_LCR, serial_in(up, UART_LCR) & ~UART_LCR_SBC);
+ 	serial8250_clear_fifos(up);
+ 
+-#ifdef CONFIG_SERIAL_8250_RSA
+-	/*
+-	 * Reset the RSA board back to 115kbps compat mode.
+-	 */
+-	disable_rsa(up);
+-#endif
+-
+ 	/*
+ 	 * Read data port to reset things, and then unlink from
+ 	 * the IRQ chain.
+@@ -2289,7 +1318,11 @@ serial8250_set_termios(struct uart_port
+ 	 * have sufficient FIFO entries for the latency of the remote
+ 	 * UART to respond.  IOW, at least 32 bytes of FIFO.
+ 	 */
++#ifdef CONFIG_SERIAL_RTL8198_UART1
++	if (up->capabilities & UART_CAP_AFE && up->port.fifosize >= 16) {
++#else
+ 	if (up->capabilities & UART_CAP_AFE && up->port.fifosize >= 32) {
++#endif
+ 		up->mcr &= ~UART_MCR_AFE;
+ 		if (termios->c_cflag & CRTSCTS)
+ 			up->mcr |= UART_MCR_AFE;
+@@ -2356,46 +1389,21 @@ serial8250_set_termios(struct uart_port
+ 		if (termios->c_cflag & CRTSCTS)
+ 			efr |= UART_EFR_CTS;
+ 
+-		serial_outp(up, UART_LCR, 0xBF);
+-		serial_outp(up, UART_EFR, efr);
+-	}
+-
+-#ifdef CONFIG_ARCH_OMAP
+-	/* Workaround to enable 115200 baud on OMAP1510 internal ports */
+-	if (cpu_is_omap1510() && is_omap_port(up)) {
+-		if (baud == 115200) {
+-			quot = 1;
+-			serial_out(up, UART_OMAP_OSC_12M_SEL, 1);
+-		} else
+-			serial_out(up, UART_OMAP_OSC_12M_SEL, 0);
+-	}
+-#endif
+-
+-	if (up->capabilities & UART_NATSEMI) {
+-		/* Switch to bank 2 not bank 1, to avoid resetting EXCR2 */
+-		serial_outp(up, UART_LCR, 0xe0);
+-	} else {
+-		serial_outp(up, UART_LCR, cval | UART_LCR_DLAB);/* set DLAB */
++		serial_out(up, UART_LCR, 0xBF);
++		serial_out(up, UART_EFR, efr);
+ 	}
+ 
++    serial_out(up, UART_LCR, cval | UART_LCR_DLAB);/* set DLAB */
+ 	serial_dl_write(up, quot);
+ 
+-	/*
+-	 * LCR DLAB must be set to enable 64-byte FIFO mode. If the FCR
+-	 * is written without DLAB set, this mode will be disabled.
+-	 */
+-	if (up->port.type == PORT_16750)
+-		serial_outp(up, UART_FCR, fcr);
+-
+-	serial_outp(up, UART_LCR, cval);		/* reset DLAB */
++	serial_out(up, UART_LCR, cval);		/* reset DLAB */
+ 	up->lcr = cval;					/* Save LCR */
+-	if (up->port.type != PORT_16750) {
+ 		if (fcr & UART_FCR_ENABLE_FIFO) {
+ 			/* emulated UARTs (Lucent Venus 167x) need two steps */
+-			serial_outp(up, UART_FCR, UART_FCR_ENABLE_FIFO);
+-		}
+-		serial_outp(up, UART_FCR, fcr);		/* set fcr */
++      serial_out(up, UART_FCR, UART_FCR_ENABLE_FIFO);
+ 	}
++    serial_out(up, UART_FCR, fcr);		/* set fcr */
++
+ 	serial8250_set_mctrl(&up->port, up->port.mctrl);
+ 	spin_unlock_irqrestore(&up->port.lock, flags);
+ 	/* Don't rewrite B0 */
+@@ -2417,12 +1425,6 @@ serial8250_pm(struct uart_port *port, un
+ 
+ static unsigned int serial8250_port_size(struct uart_8250_port *pt)
+ {
+-	if (pt->port.iotype == UPIO_AU)
+-		return 0x100000;
+-#ifdef CONFIG_ARCH_OMAP
+-	if (is_omap_port(pt))
+-		return 0x16 << pt->port.regshift;
+-#endif
+ 	return 8 << pt->port.regshift;
+ }
+ 
+@@ -2435,8 +1437,6 @@ static int serial8250_request_std_resour
+ 	int ret = 0;
+ 
+ 	switch (up->port.iotype) {
+-	case UPIO_AU:
+-	case UPIO_TSI:
+ 	case UPIO_MEM32:
+ 	case UPIO_MEM:
+ 	case UPIO_DWAPB:
+@@ -2463,6 +1463,8 @@ static int serial8250_request_std_resour
+ 		if (!request_region(up->port.iobase, size, "serial"))
+ 			ret = -EBUSY;
+ 		break;
++	case UPIO_I2C:
++		break;
+ 	}
+ 	return ret;
+ }
+@@ -2472,8 +1474,6 @@ static void serial8250_release_std_resou
+ 	unsigned int size = serial8250_port_size(up);
+ 
+ 	switch (up->port.iotype) {
+-	case UPIO_AU:
+-	case UPIO_TSI:
+ 	case UPIO_MEM32:
+ 	case UPIO_MEM:
+ 	case UPIO_DWAPB:
+@@ -2492,38 +1492,7 @@ static void serial8250_release_std_resou
+ 	case UPIO_PORT:
+ 		release_region(up->port.iobase, size);
+ 		break;
+-	}
+-}
+-
+-static int serial8250_request_rsa_resource(struct uart_8250_port *up)
+-{
+-	unsigned long start = UART_RSA_BASE << up->port.regshift;
+-	unsigned int size = 8 << up->port.regshift;
+-	int ret = -EINVAL;
+-
+-	switch (up->port.iotype) {
+-	case UPIO_HUB6:
+-	case UPIO_PORT:
+-		start += up->port.iobase;
+-		if (request_region(start, size, "serial-rsa"))
+-			ret = 0;
+-		else
+-			ret = -EBUSY;
+-		break;
+-	}
+-
+-	return ret;
+-}
+-
+-static void serial8250_release_rsa_resource(struct uart_8250_port *up)
+-{
+-	unsigned long offset = UART_RSA_BASE << up->port.regshift;
+-	unsigned int size = 8 << up->port.regshift;
+-
+-	switch (up->port.iotype) {
+-	case UPIO_HUB6:
+-	case UPIO_PORT:
+-		release_region(up->port.iobase + offset, size);
++	case UPIO_I2C:
+ 		break;
+ 	}
+ }
+@@ -2533,29 +1502,18 @@ static void serial8250_release_port(stru
+ 	struct uart_8250_port *up = (struct uart_8250_port *)port;
+ 
+ 	serial8250_release_std_resource(up);
+-	if (up->port.type == PORT_RSA)
+-		serial8250_release_rsa_resource(up);
+ }
+ 
+ static int serial8250_request_port(struct uart_port *port)
+ {
+ 	struct uart_8250_port *up = (struct uart_8250_port *)port;
+-	int ret = 0;
+ 
+-	ret = serial8250_request_std_resource(up);
+-	if (ret == 0 && up->port.type == PORT_RSA) {
+-		ret = serial8250_request_rsa_resource(up);
+-		if (ret < 0)
+-			serial8250_release_std_resource(up);
+-	}
+-
+-	return ret;
++	return serial8250_request_std_resource(up);
+ }
+ 
+ static void serial8250_config_port(struct uart_port *port, int flags)
+ {
+ 	struct uart_8250_port *up = (struct uart_8250_port *)port;
+-	int probeflags = PROBE_ANY;
+ 	int ret;
+ 
+ 	/*
+@@ -2566,20 +1524,9 @@ static void serial8250_config_port(struc
+ 	if (ret < 0)
+ 		return;
+ 
+-	ret = serial8250_request_rsa_resource(up);
+-	if (ret < 0)
+-		probeflags &= ~PROBE_RSA;
+-
+ 	if (up->port.iotype != up->cur_iotype)
+ 		set_io_from_upio(port);
+ 
+-	if (flags & UART_CONFIG_TYPE)
+-		autoconfig(up, probeflags);
+-	if (up->port.type != PORT_UNKNOWN && flags & UART_CONFIG_IRQ)
+-		autoconfig_irq(up);
+-
+-	if (up->port.type != PORT_RSA && probeflags & PROBE_RSA)
+-		serial8250_release_rsa_resource(up);
+ 	if (up->port.type == PORT_UNKNOWN)
+ 		serial8250_release_std_resource(up);
+ }
+@@ -2773,6 +1720,14 @@ static int __init serial8250_console_set
+ 	int parity = 'n';
+ 	int flow = 'n';
+ 
++#ifdef CONFIG_SERIAL_SC16IS7X0
++	extern int __init early_sc16is7x0_init_i2c_and_check( void );
++	if( serial8250_ports[co->index].port.iotype == UPIO_I2C &&
++		early_sc16is7x0_init_i2c_and_check() != 0 )
++	{
++		return -ENODEV;
++	}
++#endif
+ 	/*
+ 	 * Check whether an invalid uart number has been specified, and
+ 	 * if so, search for the first available port that does have
+@@ -2902,19 +1857,6 @@ void serial8250_resume_port(int line)
+ {
+ 	struct uart_8250_port *up = &serial8250_ports[line];
+ 
+-	if (up->capabilities & UART_NATSEMI) {
+-		unsigned char tmp;
+-
+-		/* Ensure it's still in high speed mode */
+-		serial_outp(up, UART_LCR, 0xE0);
+-
+-		tmp = serial_in(up, 0x04); /* EXCR2 */
+-		tmp &= ~0xB0; /* Disable LOCK, mask out PRESL[01] */
+-		tmp |= 0x10;  /* 1.625 divisor for baud_base --> 921600 */
+-		serial_outp(up, 0x04, tmp);
+-
+-		serial_outp(up, UART_LCR, 0);
+-	}
+ 	uart_resume_port(&serial8250_reg, &up->port);
+ }
+ 
+@@ -3159,12 +2101,8 @@ static int __init serial8250_init(void)
+ 		"%d ports, IRQ sharing %sabled\n", nr_uarts,
+ 		share_irqs ? "en" : "dis");
+ 
+-#ifdef CONFIG_SPARC
+-	ret = sunserial_register_minors(&serial8250_reg, UART_NR);
+-#else
+ 	serial8250_reg.nr = UART_NR;
+ 	ret = uart_register_driver(&serial8250_reg);
+-#endif
+ 	if (ret)
+ 		goto out;
+ 
+@@ -3189,11 +2127,7 @@ static int __init serial8250_init(void)
+ put_dev:
+ 	platform_device_put(serial8250_isa_devs);
+ unreg_uart_drv:
+-#ifdef CONFIG_SPARC
+-	sunserial_unregister_minors(&serial8250_reg, UART_NR);
+-#else
+ 	uart_unregister_driver(&serial8250_reg);
+-#endif
+ out:
+ 	return ret;
+ }
+@@ -3212,11 +2146,7 @@ static void __exit serial8250_exit(void)
+ 	platform_driver_unregister(&serial8250_isa_driver);
+ 	platform_device_unregister(isa_dev);
+ 
+-#ifdef CONFIG_SPARC
+-	sunserial_unregister_minors(&serial8250_reg, UART_NR);
+-#else
+ 	uart_unregister_driver(&serial8250_reg);
+-#endif
+ }
+ 
+ module_init(serial8250_init);
+@@ -3235,8 +2165,4 @@ MODULE_PARM_DESC(share_irqs, "Share IRQs
+ module_param(nr_uarts, uint, 0644);
+ MODULE_PARM_DESC(nr_uarts, "Maximum number of UARTs supported. (1-" __MODULE_STRING(CONFIG_SERIAL_8250_NR_UARTS) ")");
+ 
+-#ifdef CONFIG_SERIAL_8250_RSA
+-module_param_array(probe_rsa, ulong, &probe_rsa_count, 0444);
+-MODULE_PARM_DESC(probe_rsa, "Probe I/O ports for RSA");
+-#endif
+ MODULE_ALIAS_CHARDEV_MAJOR(TTY_MAJOR);
+--- linux-2.6.30.9/drivers/serial/8250.h	2009-10-05 18:38:08.000000000 +0300
++++ linux-2.6.30.9-rsdk/drivers/serial/8250.h	2013-05-02 01:47:55.684226900 +0300
+@@ -60,20 +60,4 @@ struct serial8250_config {
+ #define SERIAL8250_SHARE_IRQS 0
+ #endif
+ 
+-#if defined(__alpha__) && !defined(CONFIG_PCI)
+-/*
+- * Digital did something really horribly wrong with the OUT1 and OUT2
+- * lines on at least some ALPHA's.  The failure mode is that if either
+- * is cleared, the machine locks up with endless interrupts.
+- */
+-#define ALPHA_KLUDGE_MCR  (UART_MCR_OUT2 | UART_MCR_OUT1)
+-#elif defined(CONFIG_SBC8560)
+-/*
+- * WindRiver did something similarly broken on their SBC8560 board. The
+- * UART tristates its IRQ output while OUT2 is clear, but they pulled
+- * the interrupt line _up_ instead of down, so if we register the IRQ
+- * while the UART is in that state, we die in an IRQ storm. */
+-#define ALPHA_KLUDGE_MCR (UART_MCR_OUT2)
+-#else
+ #define ALPHA_KLUDGE_MCR 0
+-#endif
+--- linux-2.6.30.9/drivers/serial/Kconfig	2009-10-05 18:38:08.000000000 +0300
++++ linux-2.6.30.9-rsdk/drivers/serial/Kconfig	2013-05-02 01:47:55.686226899 +0300
+@@ -1,9 +1,10 @@
+ #
+ # Serial device configuration
+ #
++# $Id: Kconfig,v 1.11 2004/03/11 18:08:04 lethal Exp $
++#
+ 
+ menu "Serial drivers"
+-	depends on HAS_IOMEM
+ 
+ #
+ # The new 8250/16550 serial drivers
+@@ -59,61 +60,6 @@ config SERIAL_8250_CONSOLE
+ 	  kernel will automatically use the first serial line, /dev/ttyS0, as
+ 	  system console.
+ 
+-	  You can set that using a kernel command line option such as
+-	  "console=uart8250,io,0x3f8,9600n8"
+-	  "console=uart8250,mmio,0xff5e0000,115200n8".
+-	  and it will switch to normal serial console when the corresponding 
+-	  port is ready.
+-	  "earlycon=uart8250,io,0x3f8,9600n8"
+-	  "earlycon=uart8250,mmio,0xff5e0000,115200n8".
+-	  it will not only setup early console.
+-
+-	  If unsure, say N.
+-
+-config FIX_EARLYCON_MEM
+-	bool
+-	depends on X86
+-	default y
+-
+-config SERIAL_8250_GSC
+-	tristate
+-	depends on SERIAL_8250 && GSC
+-	default SERIAL_8250
+-
+-config SERIAL_8250_PCI
+-	tristate "8250/16550 PCI device support" if EMBEDDED
+-	depends on SERIAL_8250 && PCI
+-	default SERIAL_8250
+-	help
+-	  This builds standard PCI serial support. You may be able to
+-	  disable this feature if you only need legacy serial support.
+-	  Saves about 9K.
+-
+-config SERIAL_8250_PNP
+-	tristate "8250/16550 PNP device support" if EMBEDDED
+-	depends on SERIAL_8250 && PNP
+-	default SERIAL_8250
+-	help
+-	  This builds standard PNP serial support. You may be able to
+-	  disable this feature if you only need legacy serial support.
+-
+-config SERIAL_8250_HP300
+-	tristate
+-	depends on SERIAL_8250 && HP300
+-	default SERIAL_8250
+-
+-config SERIAL_8250_CS
+-	tristate "8250/16550 PCMCIA device support"
+-	depends on PCMCIA && SERIAL_8250
+-	---help---
+-	  Say Y here to enable support for 16-bit PCMCIA serial devices,
+-	  including serial port cards, modems, and the modem functions of
+-	  multi-function Ethernet/modem cards. (PCMCIA- or PC-cards are
+-	  credit-card size devices often used with laptops.)
+-
+-	  To compile this driver as a module, choose M here: the
+-	  module will be called serial_cs.
+-
+ 	  If unsure, say N.
+ 
+ config SERIAL_8250_NR_UARTS
+@@ -163,58 +109,6 @@ config SERIAL_8250_MANY_PORTS
+ 	  say N here to save some memory. You can also say Y if you have an
+ 	  "intelligent" multiport card such as Cyclades, Digiboards, etc.
+ 
+-#
+-# Multi-port serial cards
+-#
+-
+-config SERIAL_8250_FOURPORT
+-	tristate "Support Fourport cards"
+-	depends on SERIAL_8250 != n && ISA && SERIAL_8250_MANY_PORTS
+-	help
+-	  Say Y here if you have an AST FourPort serial board.
+-
+-	  To compile this driver as a module, choose M here: the module
+-	  will be called 8250_fourport.
+-
+-config SERIAL_8250_ACCENT
+-	tristate "Support Accent cards"
+-	depends on SERIAL_8250 != n && ISA && SERIAL_8250_MANY_PORTS
+-	help
+-	  Say Y here if you have an Accent Async serial board.
+-
+-	  To compile this driver as a module, choose M here: the module
+-	  will be called 8250_accent.
+-
+-config SERIAL_8250_BOCA
+-	tristate "Support Boca cards"
+-	depends on SERIAL_8250 != n && ISA && SERIAL_8250_MANY_PORTS
+-	help
+-	  Say Y here if you have a Boca serial board.  Please read the Boca
+-	  mini-HOWTO, available from <http://www.tldp.org/docs.html#howto>
+-
+-	  To compile this driver as a module, choose M here: the module
+-	  will be called 8250_boca.
+-
+-config SERIAL_8250_EXAR_ST16C554
+-	tristate "Support Exar ST16C554/554D Quad UART"
+-	depends on SERIAL_8250 != n && ISA && SERIAL_8250_MANY_PORTS
+-	help
+-	  The Uplogix Envoy TU301 uses this Exar Quad UART.  If you are
+-	  tinkering with your Envoy TU301, or have a machine with this UART,
+-	  say Y here.
+-
+-	  To compile this driver as a module, choose M here: the module
+-	  will be called 8250_exar_st16c554.
+-
+-config SERIAL_8250_HUB6
+-	tristate "Support Hub6 cards"
+-	depends on SERIAL_8250 != n && ISA && SERIAL_8250_MANY_PORTS
+-	help
+-	  Say Y here if you have a HUB6 serial board.
+-
+-	  To compile this driver as a module, choose M here: the module
+-	  will be called 8250_hub6.
+-
+ config SERIAL_8250_SHARE_IRQ
+ 	bool "Support for sharing serial interrupts"
+ 	depends on SERIAL_8250_EXTENDED
+@@ -223,1214 +117,48 @@ config SERIAL_8250_SHARE_IRQ
+ 	  serial ports on the same board to share a single IRQ. To enable
+ 	  support for this in the serial driver, say Y here.
+ 
+-config SERIAL_8250_DETECT_IRQ
+-	bool "Autodetect IRQ on standard ports (unsafe)"
+-	depends on SERIAL_8250_EXTENDED
+-	help
+-	  Say Y here if you want the kernel to try to guess which IRQ
+-	  to use for your serial port.
+-
+-	  This is considered unsafe; it is far better to configure the IRQ in
+-	  a boot script using the setserial command.
+-
+-	  If unsure, say N.
+-
+-config SERIAL_8250_RSA
+-	bool "Support RSA serial ports"
+-	depends on SERIAL_8250_EXTENDED
+-	help
+-	  ::: To be written :::
+-
+-config SERIAL_8250_MCA
+-	tristate "Support 8250-type ports on MCA buses"
+-	depends on SERIAL_8250 != n && MCA
+-	help
+-	  Say Y here if you have a MCA serial ports.
+-
+-	  To compile this driver as a module, choose M here: the module
+-	  will be called 8250_mca.
+-
+-config SERIAL_8250_ACORN
+-	tristate "Acorn expansion card serial port support"
+-	depends on ARCH_ACORN && SERIAL_8250
+-	help
+-	  If you have an Atomwide Serial card or Serial Port card for an Acorn
+-	  system, say Y to this option.  The driver can handle 1, 2, or 3 port
+-	  cards.  If unsure, say N.
+-
+-config SERIAL_8250_AU1X00
+-	bool "Au1x00 serial port support"
+-	depends on SERIAL_8250 != n && SOC_AU1X00
+-	help
+-	  If you have an Au1x00 SOC based board and want to use the serial port,
+-	  say Y to this option. The driver can handle up to 4 serial ports,
+-	  depending on the SOC. If unsure, say N.
+-
+-config SERIAL_8250_RM9K
+-	bool "Support for MIPS RM9xxx integrated serial port"
+-	depends on SERIAL_8250 != n && SERIAL_RM9000
+-	select SERIAL_8250_SHARE_IRQ
+-	help
+-	  Selecting this option will add support for the integrated serial
+-	  port hardware found on MIPS RM9122 and similar processors.
+-	  If unsure, say N.
+-
+-comment "Non-8250 serial port support"
+-
+-config SERIAL_AMBA_PL010
+-	tristate "ARM AMBA PL010 serial port support"
+-	depends on ARM_AMBA && (BROKEN || !ARCH_VERSATILE)
+-	select SERIAL_CORE
+-	help
+-	  This selects the ARM(R) AMBA(R) PrimeCell PL010 UART.  If you have
+-	  an Integrator/AP or Integrator/PP2 platform, or if you have a
+-	  Cirrus Logic EP93xx CPU, say Y or M here.
+-
+-	  If unsure, say N.
+-
+-config SERIAL_AMBA_PL010_CONSOLE
+-	bool "Support for console on AMBA serial port"
+-	depends on SERIAL_AMBA_PL010=y
+-	select SERIAL_CORE_CONSOLE
+-	---help---
+-	  Say Y here if you wish to use an AMBA PrimeCell UART as the system
+-	  console (the system console is the device which receives all kernel
+-	  messages and warnings and which allows logins in single user mode).
+-
+-	  Even if you say Y here, the currently visible framebuffer console
+-	  (/dev/tty0) will still be used as the system console by default, but
+-	  you can alter that using a kernel command line option such as
+-	  "console=ttyAM0". (Try "man bootparam" or see the documentation of
+-	  your boot loader (lilo or loadlin) about how to pass options to the
+-	  kernel at boot time.)
+-
+-config SERIAL_AMBA_PL011
+-	tristate "ARM AMBA PL011 serial port support"
+-	depends on ARM_AMBA
+-	select SERIAL_CORE
+-	help
+-	  This selects the ARM(R) AMBA(R) PrimeCell PL011 UART.  If you have
+-	  an Integrator/PP2, Integrator/CP or Versatile platform, say Y or M
+-	  here.
+-
+-	  If unsure, say N.
+-
+-config SERIAL_AMBA_PL011_CONSOLE
+-	bool "Support for console on AMBA serial port"
+-	depends on SERIAL_AMBA_PL011=y
+-	select SERIAL_CORE_CONSOLE
+-	---help---
+-	  Say Y here if you wish to use an AMBA PrimeCell UART as the system
+-	  console (the system console is the device which receives all kernel
+-	  messages and warnings and which allows logins in single user mode).
+-
+-	  Even if you say Y here, the currently visible framebuffer console
+-	  (/dev/tty0) will still be used as the system console by default, but
+-	  you can alter that using a kernel command line option such as
+-	  "console=ttyAMA0". (Try "man bootparam" or see the documentation of
+-	  your boot loader (lilo or loadlin) about how to pass options to the
+-	  kernel at boot time.)
+-
+-config SERIAL_SB1250_DUART
+-	tristate "BCM1xxx on-chip DUART serial support"
+-	depends on SIBYTE_SB1xxx_SOC=y
+-	select SERIAL_CORE
+-	default y
+-	---help---
+-	  Support for the asynchronous serial interface (DUART) included in
+-	  the BCM1250 and derived System-On-a-Chip (SOC) devices.  Note that
+-	  the letter D in DUART stands for "dual", which is how the device
+-	  is implemented.  Depending on the SOC configuration there may be
+-	  one or more DUARTs available of which all are handled.
+-
+-	  If unsure, say Y.  To compile this driver as a module, choose M here:
+-	  the module will be called sb1250-duart.
+-
+-config SERIAL_SB1250_DUART_CONSOLE
+-	bool "Support for console on a BCM1xxx DUART serial port"
+-	depends on SERIAL_SB1250_DUART=y
+-	select SERIAL_CORE_CONSOLE
+-	default y
+-	---help---
+-	  If you say Y here, it will be possible to use a serial port as the
+-	  system console (the system console is the device which receives all
+-	  kernel messages and warnings and which allows logins in single user
+-	  mode).
+-
+-	  If unsure, say Y.
+-
+-config SERIAL_ATMEL
+-	bool "AT91 / AT32 on-chip serial port support"
+-	depends on (ARM && ARCH_AT91) || AVR32
+-	select SERIAL_CORE
+-	help
+-	  This enables the driver for the on-chip UARTs of the Atmel
+-	  AT91 and AT32 processors.
+-
+-config SERIAL_ATMEL_CONSOLE
+-	bool "Support for console on AT91 / AT32 serial port"
+-	depends on SERIAL_ATMEL=y
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  Say Y here if you wish to use an on-chip UART on a Atmel
+-	  AT91 or AT32 processor as the system console (the system
+-	  console is the device which receives all kernel messages and
+-	  warnings and which allows logins in single user mode).
+-
+-config SERIAL_ATMEL_PDC
+-	bool "Support DMA transfers on AT91 / AT32 serial port"
+-	depends on SERIAL_ATMEL
+-	default y
+-	help
+-	  Say Y here if you wish to use the PDC to do DMA transfers to
+-	  and from the Atmel AT91 / AT32 serial port. In order to
+-	  actually use DMA transfers, make sure that the use_dma_tx
+-	  and use_dma_rx members in the atmel_uart_data struct is set
+-	  appropriately for each port.
+-
+-	  Note that break and error handling currently doesn't work
+-	  properly when DMA is enabled. Make sure that ports where
+-	  this matters don't use DMA.
+-
+-config SERIAL_ATMEL_TTYAT
+-	bool "Install as device ttyATn instead of ttySn"
+-	depends on SERIAL_ATMEL=y
+-	help
+-	  Say Y here if you wish to have the internal AT91 / AT32 UARTs
+-	  appear as /dev/ttyATn (major 204, minor starting at 154)
+-	  instead of the normal /dev/ttySn (major 4, minor starting at
+-	  64). This is necessary if you also want other UARTs, such as
+-	  external 8250/16C550 compatible UARTs.
+-	  The ttySn nodes are legally reserved for the 8250 serial driver
+-	  but are often misused by other serial drivers.
+-
+-	  To use this, you should create suitable ttyATn device nodes in
+-	  /dev/, and pass "console=ttyATn" to the kernel.
+-
+-	  Say Y if you have an external 8250/16C550 UART.  If unsure, say N.
+-
+-config SERIAL_KS8695
+-	bool "Micrel KS8695 (Centaur) serial port support"
+-	depends on ARCH_KS8695
+-	select SERIAL_CORE
+-	help
+-	  This selects the Micrel Centaur KS8695 UART.  Say Y here.
+-
+-config SERIAL_KS8695_CONSOLE
+-	bool "Support for console on KS8695 (Centaur) serial port"
+-	depends on SERIAL_KS8695=y
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  Say Y here if you wish to use a KS8695 (Centaur) UART as the
+-	  system console (the system console is the device which
+-	  receives all kernel messages and warnings and which allows
+-	  logins in single user mode).
+-
+-config SERIAL_CLPS711X
+-	tristate "CLPS711X serial port support"
+-	depends on ARM && ARCH_CLPS711X
+-	select SERIAL_CORE
+-	help
+-	  ::: To be written :::
+-
+-config SERIAL_CLPS711X_CONSOLE
+-	bool "Support for console on CLPS711X serial port"
+-	depends on SERIAL_CLPS711X=y
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  Even if you say Y here, the currently visible virtual console
+-	  (/dev/tty0) will still be used as the system console by default, but
+-	  you can alter that using a kernel command line option such as
+-	  "console=ttyCL1". (Try "man bootparam" or see the documentation of
+-	  your boot loader (lilo or loadlin) about how to pass options to the
+-	  kernel at boot time.)
+-
+-config SERIAL_SAMSUNG
+-	tristate "Samsung SoC serial support"
+-	depends on ARM && PLAT_S3C
+-	select SERIAL_CORE
+-	help
+-	  Support for the on-chip UARTs on the Samsung S3C24XX series CPUs,
+-	  providing /dev/ttySAC0, 1 and 2 (note, some machines may not
+-	  provide all of these ports, depending on how the serial port
+-	  pins are configured.
+-
+-config SERIAL_SAMSUNG_UARTS
+-	int
+-	depends on ARM && PLAT_S3C
+-	default 2 if ARCH_S3C2400
+-	default 4 if ARCH_S3C64XX || CPU_S3C2443
+-	default 3
+-	help
+-	  Select the number of available UART ports for the Samsung S3C
+-	  serial driver
+-	
+-config SERIAL_SAMSUNG_DEBUG
+-	bool "Samsung SoC serial debug"
+-	depends on SERIAL_SAMSUNG && DEBUG_LL
+-	help
+-	  Add support for debugging the serial driver. Since this is
+-	  generally being used as a console, we use our own output
+-	  routines that go via the low-level debug printascii()
+-	  function.
+-
+-config SERIAL_SAMSUNG_CONSOLE
+-	bool "Support for console on Samsung SoC serial port"
+-	depends on SERIAL_SAMSUNG=y
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  Allow selection of the S3C24XX on-board serial ports for use as
+-	  an virtual console.
+-
+-	  Even if you say Y here, the currently visible virtual console
+-	  (/dev/tty0) will still be used as the system console by default, but
+-	  you can alter that using a kernel command line option such as
+-	  "console=ttySACx". (Try "man bootparam" or see the documentation of
+-	  your boot loader about how to pass options to the kernel at
+-	  boot time.)
+-
+-config SERIAL_S3C2400
+-	tristate "Samsung S3C2410 Serial port support"
+-	depends on ARM && SERIAL_SAMSUNG && CPU_S3C2400
+-	default y if CPU_S3C2400
+-	help
+-	  Serial port support for the Samsung S3C2400 SoC
+-
+-config SERIAL_S3C2410
+-	tristate "Samsung S3C2410 Serial port support"
+-	depends on SERIAL_SAMSUNG && CPU_S3C2410
+-	default y if CPU_S3C2410
+-	help
+-	  Serial port support for the Samsung S3C2410 SoC
+-
+-config SERIAL_S3C2412
+-	tristate "Samsung S3C2412/S3C2413 Serial port support"
+-	depends on SERIAL_SAMSUNG && CPU_S3C2412
+-	default y if CPU_S3C2412
+-	help
+-	  Serial port support for the Samsung S3C2412 and S3C2413 SoC
+-
+-config SERIAL_S3C2440
+-	tristate "Samsung S3C2440/S3C2442 Serial port support"
+-	depends on SERIAL_SAMSUNG && (CPU_S3C2440 || CPU_S3C2442)
+-	default y if CPU_S3C2440
+-	default y if CPU_S3C2442
+-	help
+-	  Serial port support for the Samsung S3C2440 and S3C2442 SoC
+-
+-config SERIAL_S3C24A0
+-	tristate "Samsung S3C24A0 Serial port support"
+-	depends on SERIAL_SAMSUNG && CPU_S3C24A0
+-	default y if CPU_S3C24A0
+-	help
+-	  Serial port support for the Samsung S3C24A0 SoC
+-
+-config SERIAL_S3C6400
+-	tristate "Samsung S3C6400/S3C6410 Serial port support"
+-	depends on SERIAL_SAMSUNG && (CPU_S3C600 || CPU_S3C6410)
+-	default y
+-	help
+-	  Serial port support for the Samsung S3C6400 and S3C6410
+-	  SoCs
+-
+-config SERIAL_MAX3100
+-	tristate "MAX3100 support"
+-	depends on SPI
+-	select SERIAL_CORE
+-	help
+-	  MAX3100 chip support
+-
+-config SERIAL_DZ
+-	bool "DECstation DZ serial driver"
+-	depends on MACH_DECSTATION && 32BIT
+-	select SERIAL_CORE
+-	default y
+-	---help---
+-	  DZ11-family serial controllers for DECstations and VAXstations,
+-	  including the DC7085, M7814, and M7819.
+-
+-config SERIAL_DZ_CONSOLE
+-	bool "Support console on DECstation DZ serial driver"
+-	depends on SERIAL_DZ=y
+-	select SERIAL_CORE_CONSOLE
+-	default y
+-	---help---
+-	  If you say Y here, it will be possible to use a serial port as the
+-	  system console (the system console is the device which receives all
+-	  kernel messages and warnings and which allows logins in single user
+-	  mode).
+-
+-	  Note that the firmware uses ttyS3 as the serial console on
+-	  DECstations that use this driver.
+-
+-	  If unsure, say Y.
+-
+-config SERIAL_ZS
+-	tristate "DECstation Z85C30 serial support"
+-	depends on MACH_DECSTATION
+-	select SERIAL_CORE
+-	default y
+-	---help---
+-	  Support for the Zilog 85C350 serial communications controller used
+-	  for serial ports in newer DECstation systems.  These include the
+-	  DECsystem 5900 and all models of the DECstation and DECsystem 5000
+-	  systems except from model 200.
+-
+-	  If unsure, say Y.  To compile this driver as a module, choose M here:
+-	  the module will be called zs.
+-
+-config SERIAL_ZS_CONSOLE
+-	bool "Support for console on a DECstation Z85C30 serial port"
+-	depends on SERIAL_ZS=y
+-	select SERIAL_CORE_CONSOLE
+-	default y
+-	---help---
+-	  If you say Y here, it will be possible to use a serial port as the
+-	  system console (the system console is the device which receives all
+-	  kernel messages and warnings and which allows logins in single user
+-	  mode).
+-
+-	  Note that the firmware uses ttyS1 as the serial console on the
+-	  Maxine and ttyS3 on the others using this driver.
+-
+-	  If unsure, say Y.
+-
+-config SERIAL_21285
+-	tristate "DC21285 serial port support"
+-	depends on ARM && FOOTBRIDGE
+-	select SERIAL_CORE
+-	help
+-	  If you have a machine based on a 21285 (Footbridge) StrongARM(R)/
+-	  PCI bridge you can enable its onboard serial port by enabling this
+-	  option.
+-
+-config SERIAL_21285_CONSOLE
+-	bool "Console on DC21285 serial port"
+-	depends on SERIAL_21285=y
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  If you have enabled the serial port on the 21285 footbridge you can
+-	  make it the console by answering Y to this option.
+-
+-	  Even if you say Y here, the currently visible virtual console
+-	  (/dev/tty0) will still be used as the system console by default, but
+-	  you can alter that using a kernel command line option such as
+-	  "console=ttyFB". (Try "man bootparam" or see the documentation of
+-	  your boot loader (lilo or loadlin) about how to pass options to the
+-	  kernel at boot time.)
+-
+-config SERIAL_MPSC
+-	bool "Marvell MPSC serial port support"
+-	depends on PPC32 && MV64X60
+-	select SERIAL_CORE
+-	help
+-	  Say Y here if you want to use the Marvell MPSC serial controller.
+-
+-config SERIAL_MPSC_CONSOLE
+-	bool "Support for console on Marvell MPSC serial port"
+-	depends on SERIAL_MPSC
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  Say Y here if you want to support a serial console on a Marvell MPSC.
+-
+-config SERIAL_PXA
+-	bool "PXA serial port support"
+-	depends on ARCH_PXA || ARCH_MMP
+-	select SERIAL_CORE
+-	help
+-	  If you have a machine based on an Intel XScale PXA2xx CPU you
+-	  can enable its onboard serial ports by enabling this option.
+-
+-config SERIAL_PXA_CONSOLE
+-	bool "Console on PXA serial port"
+-	depends on SERIAL_PXA
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  If you have enabled the serial port on the Intel XScale PXA
+-	  CPU you can make it the console by answering Y to this option.
+-
+-	  Even if you say Y here, the currently visible virtual console
+-	  (/dev/tty0) will still be used as the system console by default, but
+-	  you can alter that using a kernel command line option such as
+-	  "console=ttySA0". (Try "man bootparam" or see the documentation of
+-	  your boot loader (lilo or loadlin) about how to pass options to the
+-	  kernel at boot time.)
+-
+-config SERIAL_SA1100
+-	bool "SA1100 serial port support"
+-	depends on ARM && ARCH_SA1100
+-	select SERIAL_CORE
+-	help
+-	  If you have a machine based on a SA1100/SA1110 StrongARM(R) CPU you
+-	  can enable its onboard serial port by enabling this option.
+-	  Please read <file:Documentation/arm/SA1100/serial_UART> for further
+-	  info.
+-
+-config SERIAL_SA1100_CONSOLE
+-	bool "Console on SA1100 serial port"
+-	depends on SERIAL_SA1100
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  If you have enabled the serial port on the SA1100/SA1110 StrongARM
+-	  CPU you can make it the console by answering Y to this option.
+-
+-	  Even if you say Y here, the currently visible virtual console
+-	  (/dev/tty0) will still be used as the system console by default, but
+-	  you can alter that using a kernel command line option such as
+-	  "console=ttySA0". (Try "man bootparam" or see the documentation of
+-	  your boot loader (lilo or loadlin) about how to pass options to the
+-	  kernel at boot time.)
+-
+-config SERIAL_BFIN
+-	tristate "Blackfin serial port support"
+-	depends on BLACKFIN
+-	select SERIAL_CORE
+-	select SERIAL_BFIN_UART0 if (BF531 || BF532 || BF533 || BF561)
+-	help
+-	  Add support for the built-in UARTs on the Blackfin.
+-
+-	  To compile this driver as a module, choose M here: the
+-	  module will be called bfin_5xx.
+-
+-config SERIAL_BFIN_CONSOLE
+-	bool "Console on Blackfin serial port"
+-	depends on SERIAL_BFIN=y
+-	select SERIAL_CORE_CONSOLE
+-
+-choice
+-	prompt "UART Mode"
+-	depends on SERIAL_BFIN
+-	default SERIAL_BFIN_DMA
+-	help
+-	  This driver supports the built-in serial ports of the Blackfin family
+-	  of CPUs
+-
+-config SERIAL_BFIN_DMA
+-	bool "DMA mode"
+-	depends on !DMA_UNCACHED_NONE && KGDB_SERIAL_CONSOLE=n
+-	help
+-	  This driver works under DMA mode. If this option is selected, the
+-	  blackfin simple dma driver is also enabled.
+-
+-config SERIAL_BFIN_PIO
+-	bool "PIO mode"
+-	help
+-	  This driver works under PIO mode.
+-
+-endchoice
+-
+-config SERIAL_BFIN_UART0
+-	bool "Enable UART0"
+-	depends on SERIAL_BFIN
+-	help
+-	  Enable UART0
+-
+-config BFIN_UART0_CTSRTS
+-	bool "Enable UART0 hardware flow control"
+-	depends on SERIAL_BFIN_UART0
+-	help
+-	  Enable hardware flow control in the driver. Using GPIO emulate the CTS/RTS
+-	  signal.
+-
+-config UART0_CTS_PIN
+-	int "UART0 CTS pin"
+-	depends on BFIN_UART0_CTSRTS && !BF548
+-	default 23
+-	help
+-	  The default pin is GPIO_GP7.
+-	  Refer to arch/blackfin/mach-*/include/mach/gpio.h to see the GPIO map.
+-
+-config UART0_RTS_PIN
+-	int "UART0 RTS pin"
+-	depends on BFIN_UART0_CTSRTS && !BF548
+-	default 22
+-	help
+-	  The default pin is GPIO_GP6.
+-	  Refer to arch/blackfin/mach-*/include/mach/gpio.h to see the GPIO map.
+-
+-config SERIAL_BFIN_UART1
+-	bool "Enable UART1"
+-	depends on SERIAL_BFIN && (!BF531 && !BF532 && !BF533 && !BF561)
+-	help
+-	  Enable UART1
+-
+-config BFIN_UART1_CTSRTS
+-	bool "Enable UART1 hardware flow control"
+-	depends on SERIAL_BFIN_UART1
+-	help
+-	  Enable hardware flow control in the driver. Using GPIO emulate the CTS/RTS
+-	  signal.
+-
+-config UART1_CTS_PIN
+-	int "UART1 CTS pin"
+-	depends on BFIN_UART1_CTSRTS && !BF548
+-	default -1
+-	help
+-	  Refer to arch/blackfin/mach-*/include/mach/gpio.h to see the GPIO map.
+-
+-config UART1_RTS_PIN
+-	int "UART1 RTS pin"
+-	depends on BFIN_UART1_CTSRTS && !BF548
+-	default -1
+-	help
+-	  Refer to arch/blackfin/mach-*/include/mach/gpio.h to see the GPIO map.
+-
+-config SERIAL_BFIN_UART2
+-	bool "Enable UART2"
+-	depends on SERIAL_BFIN && (BF54x || BF538 || BF539)
+-	help
+-	  Enable UART2
+-
+-config BFIN_UART2_CTSRTS
+-	bool "Enable UART2 hardware flow control"
+-	depends on SERIAL_BFIN_UART2
+-	help
+-	  Enable hardware flow control in the driver. Using GPIO emulate the CTS/RTS
+-	  signal.
+-
+-config UART2_CTS_PIN
+-	int "UART2 CTS pin"
+-	depends on BFIN_UART2_CTSRTS && !BF548
+-	default -1
+-	help
+-	  Refer to arch/blackfin/mach-*/include/mach/gpio.h to see the GPIO map.
+-
+-config UART2_RTS_PIN
+-	int "UART2 RTS pin"
+-	depends on BFIN_UART2_CTSRTS && !BF548
+-	default -1
+-	help
+-	  Refer to arch/blackfin/mach-*/include/mach/gpio.h to see the GPIO map.
+-
+-config SERIAL_BFIN_UART3
+-	bool "Enable UART3"
+-	depends on SERIAL_BFIN && (BF54x)
+-	help
+-	  Enable UART3
+-
+-config BFIN_UART3_CTSRTS
+-	bool "Enable UART3 hardware flow control"
+-	depends on SERIAL_BFIN_UART3
+-	help
+-	  Enable hardware flow control in the driver. Using GPIO emulate the CTS/RTS
+-	  signal.
+-
+-config UART3_CTS_PIN
+-	int "UART3 CTS pin"
+-	depends on BFIN_UART3_CTSRTS && !BF548
+-	default -1
+-	help
+-	  Refer to arch/blackfin/mach-*/include/mach/gpio.h to see the GPIO map.
+-
+-config UART3_RTS_PIN
+-	int "UART3 RTS pin"
+-	depends on BFIN_UART3_CTSRTS && !BF548
+-	default -1
+-	help
+-	  Refer to arch/blackfin/mach-*/include/mach/gpio.h to see the GPIO map.
+-
+-config SERIAL_IMX
+-	bool "IMX serial port support"
+-	depends on ARM && (ARCH_IMX || ARCH_MXC)
+-	select SERIAL_CORE
+-	help
+-	  If you have a machine based on a Motorola IMX CPU you
+-	  can enable its onboard serial port by enabling this option.
+-
+-config SERIAL_IMX_CONSOLE
+-	bool "Console on IMX serial port"
+-	depends on SERIAL_IMX
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  If you have enabled the serial port on the Motorola IMX
+-	  CPU you can make it the console by answering Y to this option.
+-
+-	  Even if you say Y here, the currently visible virtual console
+-	  (/dev/tty0) will still be used as the system console by default, but
+-	  you can alter that using a kernel command line option such as
+-	  "console=ttySA0". (Try "man bootparam" or see the documentation of
+-	  your boot loader (lilo or loadlin) about how to pass options to the
+-	  kernel at boot time.)
+-
+-config SERIAL_UARTLITE
+-	tristate "Xilinx uartlite serial port support"
+-	depends on PPC32 || MICROBLAZE
+-	select SERIAL_CORE
+-	help
+-	  Say Y here if you want to use the Xilinx uartlite serial controller.
+-
+-	  To compile this driver as a module, choose M here: the
+-	  module will be called uartlite.ko.
+-
+-config SERIAL_UARTLITE_CONSOLE
+-	bool "Support for console on Xilinx uartlite serial port"
+-	depends on SERIAL_UARTLITE=y
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  Say Y here if you wish to use a Xilinx uartlite as the system
+-	  console (the system console is the device which receives all kernel
+-	  messages and warnings and which allows logins in single user mode).
+-
+-config SERIAL_SUNCORE
+-	bool
+-	depends on SPARC
+-	select SERIAL_CORE
+-	select SERIAL_CORE_CONSOLE
+-	default y
+-
+-config SERIAL_SUNZILOG
+-	tristate "Sun Zilog8530 serial support"
+-	depends on SPARC
+-	help
+-	  This driver supports the Zilog8530 serial ports found on many Sparc
+-	  systems.  Say Y or M if you want to be able to these serial ports.
+-
+-config SERIAL_SUNZILOG_CONSOLE
+-	bool "Console on Sun Zilog8530 serial port"
+-	depends on SERIAL_SUNZILOG=y
+-	help
+-	  If you would like to be able to use the Zilog8530 serial port
+-	  on your Sparc system as the console, you can do so by answering
+-	  Y to this option.
+-
+-config SERIAL_SUNSU
+-	tristate "Sun SU serial support"
+-	depends on SPARC && PCI
+-	help
+-	  This driver supports the 8250 serial ports that run the keyboard and
+-	  mouse on (PCI) UltraSPARC systems.  Say Y or M if you want to be able
+-	  to these serial ports.
+-
+-config SERIAL_SUNSU_CONSOLE
+-	bool "Console on Sun SU serial port"
+-	depends on SERIAL_SUNSU=y
+-	help
+-	  If you would like to be able to use the SU serial port
+-	  on your Sparc system as the console, you can do so by answering
+-	  Y to this option.
+-
+-config SERIAL_MUX
+-	tristate "Serial MUX support"
+-	depends on GSC
+-	select SERIAL_CORE
+-	default y
+-	---help---
+-	  Saying Y here will enable the hardware MUX serial driver for
+-	  the Nova, K class systems and D class with a 'remote control card'.
+-	  The hardware MUX is not 8250/16550 compatible therefore the
+-	  /dev/ttyB0 device is shared between the Serial MUX and the PDC
+-	  software console. The following steps need to be completed to use
+-	  the Serial MUX:
+-
+-	    1. create the device entry (mknod /dev/ttyB0 c 11 0)
+-	    2. Edit the /etc/inittab to start a getty listening on /dev/ttyB0
+-	    3. Add device ttyB0 to /etc/securetty (if you want to log on as
+-		 root on this console.)
+-	    4. Change the kernel command console parameter to: console=ttyB0
+-
+-config SERIAL_MUX_CONSOLE
+-	bool "Support for console on serial MUX"
+-	depends on SERIAL_MUX=y
+-	select SERIAL_CORE_CONSOLE
+-	default y
+-
+-config PDC_CONSOLE
+-	bool "PDC software console support"
+-	depends on PARISC && !SERIAL_MUX && VT
+-	default n
+-	help
+-	  Saying Y here will enable the software based PDC console to be 
+-	  used as the system console.  This is useful for machines in 
+-	  which the hardware based console has not been written yet.  The
+-	  following steps must be competed to use the PDC console:
+-
+-	    1. create the device entry (mknod /dev/ttyB0 c 11 0)
+-	    2. Edit the /etc/inittab to start a getty listening on /dev/ttyB0
+-	    3. Add device ttyB0 to /etc/securetty (if you want to log on as
+-		 root on this console.)
+-	    4. Change the kernel command console parameter to: console=ttyB0
+-
+-config SERIAL_SUNSAB
+-	tristate "Sun Siemens SAB82532 serial support"
+-	depends on SPARC && PCI
+-	help
+-	  This driver supports the Siemens SAB82532 DUSCC serial ports on newer
+-	  (PCI) UltraSPARC systems.  Say Y or M if you want to be able to these
+-	  serial ports.
+-
+-config SERIAL_SUNSAB_CONSOLE
+-	bool "Console on Sun Siemens SAB82532 serial port"
+-	depends on SERIAL_SUNSAB=y
+-	help
+-	  If you would like to be able to use the SAB82532 serial port
+-	  on your Sparc system as the console, you can do so by answering
+-	  Y to this option.
+-
+-config SERIAL_SUNHV
+-	bool "Sun4v Hypervisor Console support"
+-	depends on SPARC64
+-	help
+-	  This driver supports the console device found on SUN4V Sparc
+-	  systems.  Say Y if you want to be able to use this device.
+-
+-config SERIAL_IP22_ZILOG
+-	tristate "SGI Zilog8530 serial support"
+-	depends on SGI_HAS_ZILOG
+-	select SERIAL_CORE
+-	help
+-	  This driver supports the Zilog8530 serial ports found on SGI
+-	  systems.  Say Y or M if you want to be able to these serial ports.
+-
+-config SERIAL_IP22_ZILOG_CONSOLE
+-	bool "Console on SGI Zilog8530 serial port"
+-	depends on SERIAL_IP22_ZILOG=y
+-	select SERIAL_CORE_CONSOLE
+-
+-config SERIAL_SH_SCI
+-	tristate "SuperH SCI(F) serial port support"
+-	depends on SUPERH || H8300
+-	select SERIAL_CORE
+-
+-config SERIAL_SH_SCI_NR_UARTS
+-	int "Maximum number of SCI(F) serial ports"
+-	depends on SERIAL_SH_SCI
+-	default "2"
+-
+-config SERIAL_SH_SCI_CONSOLE
+-	bool "Support for console on SuperH SCI(F)"
+-	depends on SERIAL_SH_SCI=y
+-	select SERIAL_CORE_CONSOLE
+-
+-config SERIAL_PNX8XXX
+-	bool "Enable PNX8XXX SoCs' UART Support"
+-	depends on MIPS && (SOC_PNX8550 || SOC_PNX833X)
+-	select SERIAL_CORE
+-	help
+-	  If you have a MIPS-based Philips SoC such as PNX8550 or PNX8330
+-	  and you want to use serial ports, say Y.  Otherwise, say N.
+-
+-config SERIAL_PNX8XXX_CONSOLE
+-	bool "Enable PNX8XX0 serial console"
+-	depends on SERIAL_PNX8XXX
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  If you have a MIPS-based Philips SoC such as PNX8550 or PNX8330
+-	  and you want to use serial console, say Y. Otherwise, say N.
+-
+ config SERIAL_CORE
+ 	tristate
+ 
+ config SERIAL_CORE_CONSOLE
+ 	bool
+ 
+-config CONSOLE_POLL
+-	bool
+-
+-config SERIAL_68328
+-	bool "68328 serial support"
+-	depends on M68328 || M68EZ328 || M68VZ328
+-	help
+-	  This driver supports the built-in serial port of the Motorola 68328
+-	  (standard, EZ and VZ varieties).
+-
+-config SERIAL_68328_RTS_CTS
+-	bool "Support RTS/CTS on 68328 serial port"
+-	depends on SERIAL_68328
+-
+-config SERIAL_MCF
+-	bool "Coldfire serial support"
+-	depends on COLDFIRE
+-	select SERIAL_CORE
+-	help
+-	  This serial driver supports the Freescale Coldfire serial ports.
+-
+-config SERIAL_MCF_BAUDRATE
+-	int "Default baudrate for Coldfire serial ports"
+-	depends on SERIAL_MCF
+-	default 19200
+-	help
+-	  This setting lets you define what the default baudrate is for the
+-	  ColdFire serial ports. The usual default varies from board to board,
+-	  and this setting is a way of catering for that.
+-
+-config SERIAL_MCF_CONSOLE
+-	bool "Coldfire serial console support"
+-	depends on SERIAL_MCF
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  Enable a ColdFire internal serial port to be the system console.
+-
+-config SERIAL_68360_SMC
+-	bool "68360 SMC uart support"
+-	depends on M68360
+-	help
+-	  This driver supports the SMC serial ports of the Motorola 68360 CPU.
+-
+-config SERIAL_68360_SCC
+-	bool "68360 SCC uart support"
+-	depends on M68360
+-	help
+-	  This driver supports the SCC serial ports of the Motorola 68360 CPU.
+-
+-config SERIAL_68360
+-	bool
+-	depends on SERIAL_68360_SMC || SERIAL_68360_SCC
+-	default y
+-
+-config SERIAL_PMACZILOG
+-	tristate "PowerMac z85c30 ESCC support"
+-	depends on PPC_OF && PPC_PMAC
+-	select SERIAL_CORE
+-	help
+-	  This driver supports the Zilog z85C30 serial ports found on
+-	  PowerMac machines.
+-	  Say Y or M if you want to be able to these serial ports.
+-
+-config SERIAL_PMACZILOG_TTYS
+-	bool "Use ttySn device nodes for Zilog z85c30"
+-	depends on SERIAL_PMACZILOG
+-	help
+-	  The pmac_zilog driver for the z85C30 chip on many powermacs
+-	  historically used the device numbers for /dev/ttySn.  The
+-	  8250 serial port driver also uses these numbers, which means
+-	  the two drivers being unable to coexist; you could not use
+-	  both z85C30 and 8250 type ports at the same time.
+-
+-	  If this option is not selected, the pmac_zilog driver will
+-	  use the device numbers allocated for /dev/ttyPZn.  This allows
+-	  the pmac_zilog and 8250 drivers to co-exist, but may cause
+-	  existing userspace setups to break.  Programs that need to
+-	  access the built-in serial ports on powermacs will need to
+-	  be reconfigured to use /dev/ttyPZn instead of /dev/ttySn.
+-
+-	  If you enable this option, any z85c30 ports in the system will
+-	  be registered as ttyS0 onwards as in the past, and you will be
+-	  unable to use the 8250 module for PCMCIA or other 16C550-style
+-	  UARTs.
+-
+-	  Say N unless you need the z85c30 ports on your powermac
+-	  to appear as /dev/ttySn.
+-
+-config SERIAL_PMACZILOG_CONSOLE
+-	bool "Console on PowerMac z85c30 serial port"
+-	depends on SERIAL_PMACZILOG=y
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  If you would like to be able to use the z85c30 serial port
+-	  on your PowerMac as the console, you can do so by answering
+-	  Y to this option.
+-
+-config SERIAL_LH7A40X
+-	tristate "Sharp LH7A40X embedded UART support"
+-	depends on ARM && ARCH_LH7A40X
+-	select SERIAL_CORE
+-	help
+-	  This enables support for the three on-board UARTs of the
+-	  Sharp LH7A40X series CPUs.  Choose Y or M.
+-
+-config SERIAL_LH7A40X_CONSOLE
+-	bool "Support for console on Sharp LH7A40X serial port"
+-	depends on SERIAL_LH7A40X=y
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  Say Y here if you wish to use one of the serial ports as the
+-	  system console--the system console is the device which
+-	  receives all kernel messages and warnings and which allows
+-	  logins in single user mode.
+-
+-	  Even if you say Y here, the currently visible framebuffer console
+-	  (/dev/tty0) will still be used as the default system console, but
+-	  you can alter that using a kernel command line, for example
+-	  "console=ttyAM1".
+-
+-config SERIAL_CPM
+-	tristate "CPM SCC/SMC serial port support"
+-	depends on CPM2 || 8xx
+-	select SERIAL_CORE
+-	help
+-	  This driver supports the SCC and SMC serial ports on Motorola 
+-	  embedded PowerPC that contain a CPM1 (8xx) or CPM2 (8xxx)
+-
+-config SERIAL_CPM_CONSOLE
+-	bool "Support for console on CPM SCC/SMC serial port"
+-	depends on SERIAL_CPM=y
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  Say Y here if you wish to use a SCC or SMC CPM UART as the system
+-	  console (the system console is the device which receives all kernel
+-	  messages and warnings and which allows logins in single user mode).
+-
+-	  Even if you say Y here, the currently visible framebuffer console
+-	  (/dev/tty0) will still be used as the system console by default, but
+-	  you can alter that using a kernel command line option such as
+-	  "console=ttyCPM0". (Try "man bootparam" or see the documentation of
+-	  your boot loader (lilo or loadlin) about how to pass options to the
+-	  kernel at boot time.)
+-
+-config SERIAL_SGI_L1_CONSOLE
+-	bool "SGI Altix L1 serial console support"
+-	depends on IA64_GENERIC || IA64_SGI_SN2
+-	select SERIAL_CORE
+-	select SERIAL_CORE_CONSOLE
+-	help
+-		If you have an SGI Altix and you would like to use the system
+-		controller serial port as your console (you want this!),
+-		say Y.  Otherwise, say N.
+-
+-config SERIAL_MPC52xx
+-	tristate "Freescale MPC52xx/MPC512x family PSC serial support"
+-	depends on PPC_MPC52xx || PPC_MPC512x
+-	select SERIAL_CORE
+-	help
+-	  This driver supports MPC52xx and MPC512x PSC serial ports. If you would
+-	  like to use them, you must answer Y or M to this option. Note that
+-	  for use as console, it must be included in kernel and not as a
+-	  module.
+-
+-config SERIAL_MPC52xx_CONSOLE
+-	bool "Console on a Freescale MPC52xx/MPC512x family PSC serial port"
+-	depends on SERIAL_MPC52xx=y
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  Select this options if you'd like to use one of the PSC serial port
+-	  of the Freescale MPC52xx family as a console.
+-
+-config SERIAL_MPC52xx_CONSOLE_BAUD
+-	int "Freescale MPC52xx/MPC512x family PSC serial port baud"
+-	depends on SERIAL_MPC52xx_CONSOLE=y
+-	default "9600"
+-	help
+-	  Select the MPC52xx console baud rate.
+-	  This value is only used if the bootloader doesn't pass in the
+-	  console baudrate
+-
+-config SERIAL_ICOM
+-	tristate "IBM Multiport Serial Adapter"
+-	depends on PCI && (PPC_ISERIES || PPC_PSERIES)
+-	select SERIAL_CORE
+-	select FW_LOADER
+-	help
+-	  This driver is for a family of multiport serial adapters
+-	  including 2 port RVX, 2 port internal modem, 4 port internal
+-	  modem and a split 1 port RVX and 1 port internal modem.
+-
+-	  This driver can also be built as a module.  If so, the module
+-	  will be called icom.
+-
+-config SERIAL_M32R_SIO
+-	bool "M32R SIO I/F"
+-	depends on M32R
+-	default y
+-	select SERIAL_CORE
+-	help
+-	  Say Y here if you want to use the M32R serial controller.
+-
+-config SERIAL_M32R_SIO_CONSOLE
+-	bool "use SIO console"
+-	depends on SERIAL_M32R_SIO=y
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  Say Y here if you want to support a serial console.
+-
+-	  If you use an M3T-M32700UT or an OPSPUT platform,
+-	  please say also y for SERIAL_M32R_PLDSIO.
+-
+-config SERIAL_M32R_PLDSIO
+-	bool "M32R SIO I/F on a PLD"
+-	depends on SERIAL_M32R_SIO=y && (PLAT_OPSPUT || PLAT_USRV || PLAT_M32700UT)
+-	default n
+-	help
+-	  Say Y here if you want to use the M32R serial controller
+-	  on a PLD (Programmable Logic Device).
+-
+-	  If you use an M3T-M32700UT or an OPSPUT platform,
+-	  please say Y.
+-
+-config SERIAL_TXX9
+-	bool "TMPTX39XX/49XX SIO support"
+-	depends on HAS_TXX9_SERIAL
+-	select SERIAL_CORE
+-	default y
+-
+-config HAS_TXX9_SERIAL
+-	bool
+-
+-config SERIAL_TXX9_NR_UARTS
+-	int "Maximum number of TMPTX39XX/49XX SIO ports"
+-	depends on SERIAL_TXX9
+-	default "6"
+-
+-config SERIAL_TXX9_CONSOLE
+-	bool "TMPTX39XX/49XX SIO Console support"
+-	depends on SERIAL_TXX9=y
+-	select SERIAL_CORE_CONSOLE
+-
+-config SERIAL_TXX9_STDSERIAL
+-	bool "TX39XX/49XX SIO act as standard serial"
+-	depends on !SERIAL_8250 && SERIAL_TXX9
+-
+-config SERIAL_VR41XX
+-	tristate "NEC VR4100 series Serial Interface Unit support"
+-	depends on CPU_VR41XX
+-	select SERIAL_CORE
+-	help
+-	  If you have a NEC VR4100 series processor and you want to use
+-	  Serial Interface Unit(SIU) or Debug Serial Interface Unit(DSIU)
+-	  (not include VR4111/VR4121 DSIU), say Y.  Otherwise, say N.
+-
+-config SERIAL_VR41XX_CONSOLE
+-	bool "Enable NEC VR4100 series Serial Interface Unit console"
+-	depends on SERIAL_VR41XX=y
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  If you have a NEC VR4100 series processor and you want to use
+-	  a console on a serial port, say Y.  Otherwise, say N.
+-
+-config SERIAL_JSM
+-	tristate "Digi International NEO PCI Support"
+-	depends on PCI
+-	select SERIAL_CORE
+-	help
+-	  This is a driver for Digi International's Neo series
+-	  of cards which provide multiple serial ports. You would need
+-	  something like this to connect more than two modems to your Linux
+-	  box, for instance in order to become a dial-in server. This driver
+-	  supports PCI boards only.
+-
+-	  If you have a card like this, say Y here, otherwise say N.
+-
+-	  To compile this driver as a module, choose M here: the
+-	  module will be called jsm.
+-
+-config SERIAL_SGI_IOC4
+-	tristate "SGI IOC4 controller serial support"
+-	depends on (IA64_GENERIC || IA64_SGI_SN2) && SGI_IOC4
+-	select SERIAL_CORE
+-	help
+-		If you have an SGI Altix with an IOC4 based Base IO card
+-		and wish to use the serial ports on this card, say Y.
+-		Otherwise, say N.
+-
+-config SERIAL_SGI_IOC3
+-	tristate "SGI Altix IOC3 serial support"
+-	depends on (IA64_GENERIC || IA64_SGI_SN2) && SGI_IOC3
+-	select SERIAL_CORE
+-	help
+-	  If you have an SGI Altix with an IOC3 serial card,
+-	  say Y or M.  Otherwise, say N.
+-
+-config SERIAL_NETX
+-	tristate "NetX serial port support"
+-	depends on ARM && ARCH_NETX
+-	select SERIAL_CORE
+-	help
+-	  If you have a machine based on a Hilscher NetX SoC you
+-	  can enable its onboard serial port by enabling this option.
+-
+-          To compile this driver as a module, choose M here: the
+-          module will be called netx-serial.
+-
+-config SERIAL_NETX_CONSOLE
+-	bool "Console on NetX serial port"
+-	depends on SERIAL_NETX=y
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  If you have enabled the serial port on the Hilscher NetX SoC
+-	  you can make it the console by answering Y to this option.
+-
+-config SERIAL_OF_PLATFORM
+-	tristate "Serial port on Open Firmware platform bus"
+-	depends on PPC_OF || MICROBLAZE
+-	depends on SERIAL_8250 || SERIAL_OF_PLATFORM_NWPSERIAL
+-	help
+-	  If you have a PowerPC based system that has serial ports
+-	  on a platform specific bus, you should enable this option.
+-	  Currently, only 8250 compatible ports are supported, but
+-	  others can easily be added.
+-
+-config SERIAL_OF_PLATFORM_NWPSERIAL
+-	tristate "NWP serial port driver"
+-	depends on PPC_OF && PPC_DCR
+-	select SERIAL_OF_PLATFORM
+-	select SERIAL_CORE_CONSOLE
+-	select SERIAL_CORE
+-	help
+-	  This driver supports the cell network processor nwp serial
+-	  device.
+-
+-config SERIAL_OF_PLATFORM_NWPSERIAL_CONSOLE
+-	bool "Console on NWP serial port"
+-	depends on SERIAL_OF_PLATFORM_NWPSERIAL=y
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  Support for Console on the NWP serial ports.
+-
+-config SERIAL_QE
+-	tristate "Freescale QUICC Engine serial port support"
+-	depends on QUICC_ENGINE
+-	select SERIAL_CORE
+-	select FW_LOADER
+-	default n
+-	help
+-	  This driver supports the QE serial ports on Freescale embedded
+-	  PowerPC that contain a QUICC Engine.
+-
+-config SERIAL_SC26XX
+-	tristate "SC2681/SC2692 serial port support"
+-	depends on SNI_RM
+-	select SERIAL_CORE
+-	help
+-	  This is a driver for the onboard serial ports of
+-	  older RM400 machines.
+-
+-config SERIAL_SC26XX_CONSOLE
+-	bool "Console on SC2681/SC2692 serial port"
+-	depends on SERIAL_SC26XX
+-	select SERIAL_CORE_CONSOLE
+-	help
+-	  Support for Console on SC2681/SC2692 serial ports.
+-
+-config SERIAL_BFIN_SPORT
+-	tristate "Blackfin SPORT emulate UART (EXPERIMENTAL)"
+-	depends on BLACKFIN && EXPERIMENTAL
+-	select SERIAL_CORE
++comment "8250 compatible port support"
++config SERIAL_RTL8198_UART1
++	bool "8198 UART1 support"
++	depends on SERIAL_8250 && SERIAL_8250_NR_UARTS >= 2 && SERIAL_8250_RUNTIME_UARTS >= 2
++	help
++		Enable 8198 UART1 support, and this MAY add an uart device to ttyS1. 
++		NOTE: We don't provide option for this port to be console. 
++
++config SERIAL_SC16IS7X0
++	bool "SC16IS7x0 series (I2C bus) support"
++	depends on SERIAL_8250 && SERIAL_8250_NR_UARTS >= 2 && SERIAL_8250_RUNTIME_UARTS >= 2
+ 	help
+-	  Enable SPORT emulate UART on Blackfin series.
+-
+-	  To compile this driver as a module, choose M here: the
+-	  module will be called bfin_sport_uart.
+-
++		Enable sc16is7x0 definition is to add an UART device to ttyS1. 
++		This is based on standard 8250, and doesn't affect original setting. 
+ choice
+-	prompt "Baud rate for Blackfin SPORT UART"
+-	depends on SERIAL_BFIN_SPORT
+-	default SERIAL_SPORT_BAUD_RATE_57600
++	prompt "Crystal for SC16IS7x0 XTAL1"
++	depends on SERIAL_SC16IS7X0
+ 	help
+-	  Choose a baud rate for the SPORT UART, other uart settings are
+-	  8 bit, 1 stop bit, no parity, no flow control.
+-
+-config SERIAL_SPORT_BAUD_RATE_115200
+-	bool "115200"
+-
+-config SERIAL_SPORT_BAUD_RATE_57600
+-	bool "57600"
+-
+-config SERIAL_SPORT_BAUD_RATE_38400
+-	bool "38400"
+-
+-config SERIAL_SPORT_BAUD_RATE_19200
+-	bool "19200"
+-
+-config SERIAL_SPORT_BAUD_RATE_9600
+-	bool "9600"
++		Crystal for SC16IS7x0 XTAL1. 
++		This is factor of baudrate, so bad parameter will cause UART to be 
++		abnormal.
++	config SERIAL_SC16IS7X0_XTAL1_CLK_1843200
++		bool "1.8432 MHZ"
++	config SERIAL_SC16IS7X0_XTAL1_CLK_14746500
++		bool "14.7465 MHZ (NXP demoboard)"
+ endchoice
+-
+-config SPORT_BAUD_RATE
+-	int
+-	depends on SERIAL_BFIN_SPORT
+-	default 115200 if (SERIAL_SPORT_BAUD_RATE_115200)
+-	default 57600 if (SERIAL_SPORT_BAUD_RATE_57600)
+-	default 38400 if (SERIAL_SPORT_BAUD_RATE_38400)
+-	default 19200 if (SERIAL_SPORT_BAUD_RATE_19200)
+-	default 9600 if (SERIAL_SPORT_BAUD_RATE_9600)
+-
++config SERIAL_SC16IS7X0_CONSOLE
++	bool "Console on SC16IS7x0 port (ttyS1)"
++	depends on SERIAL_SC16IS7X0 && SERIAL_8250_CONSOLE
++	help
++		If you don't check this option, we will use standard 8250 as console.
++		Here, 8250 and sc16is7x0 occups ttyS0 and ttyS1 respectively.
++		Notice 1:
++			You need add "console=ttyS1" to CONFIG_CMDLINE, or console output will be incorrect.  
++		Notice 2: 
++			If you want to make user space's stdout to this port, 
++			device (major,minor) of /dev/console has to be ttyS1 (4,65) 
++			instead of ttyS0 (4,64). 
+ endmenu
+--- linux-2.6.30.9/drivers/serial/Makefile	2009-10-05 18:38:08.000000000 +0300
++++ linux-2.6.30.9-rsdk/drivers/serial/Makefile	2013-05-02 01:47:55.686226899 +0300
+@@ -1,79 +1,35 @@
+ #
+ # Makefile for the kernel serial device drivers.
+ #
++ifeq ($(CONFIG_SERIAL_SC16IS7X0),y)
++	EXTRA_CFLAGS += -DCONFIG_RTK_VOIP_DRIVERS_PCM8972B_FAMILY
++endif
+ 
++ifeq ($(CONFIG_SND_RTL8197D_SOC_ALC5628),y)
++	EXTRA_CFLAGS += -DCONFIG_RTK_VOIP_DRIVERS_PCM89xxD
++endif
+ obj-$(CONFIG_SERIAL_CORE) += serial_core.o
+-obj-$(CONFIG_SERIAL_21285) += 21285.o
+ 
+ # These Sparc drivers have to appear before others such as 8250
+ # which share ttySx minor node space.  Otherwise console device
+ # names change and other unplesantries.
+-obj-$(CONFIG_SERIAL_SUNCORE) += suncore.o
+-obj-$(CONFIG_SERIAL_SUNHV) += sunhv.o
+-obj-$(CONFIG_SERIAL_SUNZILOG) += sunzilog.o
+-obj-$(CONFIG_SERIAL_SUNSU) += sunsu.o
+-obj-$(CONFIG_SERIAL_SUNSAB) += sunsab.o
+ 
+ obj-$(CONFIG_SERIAL_8250) += 8250.o
+ obj-$(CONFIG_SERIAL_8250_PNP) += 8250_pnp.o
+ obj-$(CONFIG_SERIAL_8250_GSC) += 8250_gsc.o
+ obj-$(CONFIG_SERIAL_8250_PCI) += 8250_pci.o
+-obj-$(CONFIG_SERIAL_8250_HP300) += 8250_hp300.o
+-obj-$(CONFIG_SERIAL_8250_CS) += serial_cs.o
+-obj-$(CONFIG_SERIAL_8250_ACORN) += 8250_acorn.o
+ obj-$(CONFIG_SERIAL_8250_CONSOLE) += 8250_early.o
+-obj-$(CONFIG_SERIAL_8250_FOURPORT) += 8250_fourport.o
+-obj-$(CONFIG_SERIAL_8250_ACCENT) += 8250_accent.o
+-obj-$(CONFIG_SERIAL_8250_BOCA) += 8250_boca.o
+-obj-$(CONFIG_SERIAL_8250_EXAR_ST16C554) += 8250_exar_st16c554.o
+-obj-$(CONFIG_SERIAL_8250_HUB6) += 8250_hub6.o
+-obj-$(CONFIG_SERIAL_8250_MCA) += 8250_mca.o
+-obj-$(CONFIG_SERIAL_AMBA_PL010) += amba-pl010.o
+-obj-$(CONFIG_SERIAL_AMBA_PL011) += amba-pl011.o
+-obj-$(CONFIG_SERIAL_CLPS711X) += clps711x.o
+-obj-$(CONFIG_SERIAL_PXA) += pxa.o
+-obj-$(CONFIG_SERIAL_PNX8XXX) += pnx8xxx_uart.o
+-obj-$(CONFIG_SERIAL_SA1100) += sa1100.o
+-obj-$(CONFIG_SERIAL_BFIN) += bfin_5xx.o
+-obj-$(CONFIG_SERIAL_BFIN_SPORT) += bfin_sport_uart.o
+-obj-$(CONFIG_SERIAL_SAMSUNG) += samsung.o
+-obj-$(CONFIG_SERIAL_S3C2400) += s3c2400.o
+-obj-$(CONFIG_SERIAL_S3C2410) += s3c2410.o
+-obj-$(CONFIG_SERIAL_S3C2412) += s3c2412.o
+-obj-$(CONFIG_SERIAL_S3C2440) += s3c2440.o
+-obj-$(CONFIG_SERIAL_S3C24A0) += s3c24a0.o
+-obj-$(CONFIG_SERIAL_S3C6400) += s3c6400.o
+-obj-$(CONFIG_SERIAL_MAX3100) += max3100.o
+-obj-$(CONFIG_SERIAL_IP22_ZILOG) += ip22zilog.o
+-obj-$(CONFIG_SERIAL_MUX) += mux.o
+-obj-$(CONFIG_SERIAL_68328) += 68328serial.o
+-obj-$(CONFIG_SERIAL_68360) += 68360serial.o
+-obj-$(CONFIG_SERIAL_MCF) += mcf.o
+-obj-$(CONFIG_SERIAL_PMACZILOG) += pmac_zilog.o
+-obj-$(CONFIG_SERIAL_LH7A40X) += serial_lh7a40x.o
+-obj-$(CONFIG_SERIAL_DZ) += dz.o
+-obj-$(CONFIG_SERIAL_ZS) += zs.o
+-obj-$(CONFIG_SERIAL_SH_SCI) += sh-sci.o
+-obj-$(CONFIG_SERIAL_SGI_L1_CONSOLE) += sn_console.o
+-obj-$(CONFIG_SERIAL_CPM) += cpm_uart/
+-obj-$(CONFIG_SERIAL_IMX) += imx.o
+-obj-$(CONFIG_SERIAL_MPC52xx) += mpc52xx_uart.o
+-obj-$(CONFIG_SERIAL_ICOM) += icom.o
+-obj-$(CONFIG_SERIAL_M32R_SIO) += m32r_sio.o
+-obj-$(CONFIG_SERIAL_MPSC) += mpsc.o
+-obj-$(CONFIG_SERIAL_SB1250_DUART) += sb1250-duart.o
+-obj-$(CONFIG_ETRAX_SERIAL) += crisv10.o
+-obj-$(CONFIG_SERIAL_SC26XX) += sc26xx.o
+-obj-$(CONFIG_SERIAL_JSM) += jsm/
+-obj-$(CONFIG_SERIAL_TXX9) += serial_txx9.o
+-obj-$(CONFIG_SERIAL_VR41XX) += vr41xx_siu.o
+-obj-$(CONFIG_SERIAL_SGI_IOC4) += ioc4_serial.o
+-obj-$(CONFIG_SERIAL_SGI_IOC3) += ioc3_serial.o
+-obj-$(CONFIG_SERIAL_ATMEL) += atmel_serial.o
+-obj-$(CONFIG_SERIAL_UARTLITE) += uartlite.o
+-obj-$(CONFIG_SERIAL_NETX) += netx-serial.o
+ obj-$(CONFIG_SERIAL_OF_PLATFORM) += of_serial.o
+ obj-$(CONFIG_SERIAL_OF_PLATFORM_NWPSERIAL) += nwpserial.o
+-obj-$(CONFIG_SERIAL_KS8695) += serial_ks8695.o
+ obj-$(CONFIG_KGDB_SERIAL_CONSOLE) += kgdboc.o
+-obj-$(CONFIG_SERIAL_QE) += ucc_uart.o
++obj-$(CONFIG_SERIAL_SC16IS7X0) += 8250_sc16is7x0.o
++obj-$(CONFIG_SERIAL_SC16IS7X0) += i2c.o
++obj-$(CONFIG_SERIAL_SC16IS7X0) += gpio_8972b.o
++
++ifneq ($(CONFIG_SERIAL_SC16IS7X0),y)
++	obj-$(CONFIG_SND_RTL8197D_SOC_ALC5628) += i2c.o
++endif
++obj-$(CONFIG_SND_RTL819X_SOC) += gpio_8972d.o
++obj-$(CONFIG_SND_RTL8197D_SOC_ALC5628) += i2c_alc5628.o
++
++EXTRA_CFLAGS += -Iinclude/asm-mips/rtl865x/
+--- linux-2.6.30.9/drivers/serial/serial_core.c	2009-10-05 18:38:08.000000000 +0300
++++ linux-2.6.30.9-rsdk/drivers/serial/serial_core.c	2013-05-02 01:47:55.689226899 +0300
+@@ -417,7 +417,7 @@ uart_get_divisor(struct uart_port *port,
+ 	 * Old custom speed handling.
+ 	 */
+ 	if (baud == 38400 && (port->flags & UPF_SPD_MASK) == UPF_SPD_CUST)
+-		quot = port->custom_divisor;
++		quot = 3; //port->custom_divisor;
+ 	else
+ 		quot = (port->uartclk + (8 * baud)) / (16 * baud);
+ 
+@@ -2140,12 +2140,14 @@ uart_report_port(struct uart_driver *drv
+ 		break;
+ 	case UPIO_MEM:
+ 	case UPIO_MEM32:
+-	case UPIO_AU:
+-	case UPIO_TSI:
+ 	case UPIO_DWAPB:
+ 		snprintf(address, sizeof(address),
+ 			 "MMIO 0x%llx", (unsigned long long)port->mapbase);
+ 		break;
++	case UPIO_I2C:
++		snprintf(address, sizeof(address),
++			 "I2C 0x%lx", port->iobase);
++		break;		
+ 	default:
+ 		strlcpy(address, "*unknown*", sizeof(address));
+ 		break;
+@@ -2349,8 +2351,13 @@ int uart_register_driver(struct uart_dri
+ 	normal->type		= TTY_DRIVER_TYPE_SERIAL;
+ 	normal->subtype		= SERIAL_TYPE_NORMAL;
+ 	normal->init_termios	= tty_std_termios;
++#if defined(CONFIG_SERIAL_SC16IS7X0) || defined(CONFIG_SERIAL_RTL8198_UART1)
++	normal->init_termios.c_cflag = B38400 | CS8 | CREAD | HUPCL | CLOCAL;
++	normal->init_termios.c_ispeed = normal->init_termios.c_ospeed = 38400;
++#else
+ 	normal->init_termios.c_cflag = B9600 | CS8 | CREAD | HUPCL | CLOCAL;
+ 	normal->init_termios.c_ispeed = normal->init_termios.c_ospeed = 9600;
++#endif
+ 	normal->flags		= TTY_DRIVER_REAL_RAW | TTY_DRIVER_DYNAMIC_DEV;
+ 	normal->driver_state    = drv;
+ 	tty_set_operations(normal, &uart_ops);
+@@ -2554,10 +2561,10 @@ int uart_match_port(struct uart_port *po
+ 		       (port1->hub6   == port2->hub6);
+ 	case UPIO_MEM:
+ 	case UPIO_MEM32:
+-	case UPIO_AU:
+-	case UPIO_TSI:
+ 	case UPIO_DWAPB:
+ 		return (port1->mapbase == port2->mapbase);
++	case UPIO_I2C:
++		return (port1->iobase == port2->iobase);		
+ 	}
+ 	return 0;
+ }

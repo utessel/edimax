@@ -54,7 +54,7 @@ else
   LINUX_SOURCE:=linux-$(LINUX_VERSION).tar.xz
   TESTING:=$(if $(findstring -rc,$(LINUX_VERSION)),/testing,)
   ifeq ($(call qstrip,$(CONFIG_EXTERNAL_KERNEL_TREE))$(call qstrip,$(CONFIG_KERNEL_GIT_CLONE_URI)),)
-      LINUX_SITE:=@KERNEL/linux/kernel/v3.x$(TESTING)
+      LINUX_SITE:=@KERNEL/linux/kernel/v2.6$(TESTING)
   endif
 
   ifneq ($(TARGET_BUILD),1)
@@ -66,7 +66,7 @@ ifneq (,$(findstring uml,$(BOARD)))
   LINUX_KARCH=um
 else
   ifeq (,$(LINUX_KARCH))
-    LINUX_KARCH=$(strip $(subst i386,x86,$(subst armeb,arm,$(subst mipsel,mips,$(subst mips64,mips,$(subst mips64el,mips,$(subst sh2,sh,$(subst sh3,sh,$(subst sh4,sh,$(ARCH))))))))))
+    LINUX_KARCH=$(strip $(subst lexra,rlx,$(subst i386,x86,$(subst armeb,arm,$(subst mipsel,mips,$(subst mips64,mips,$(subst mips64el,mips,$(subst sh2,sh,$(subst sh3,sh,$(subst sh4,sh,$(ARCH)))))))))))
   endif
 endif
 

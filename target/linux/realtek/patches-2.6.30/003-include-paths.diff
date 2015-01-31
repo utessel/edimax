@@ -1,0 +1,11 @@
+--- a/drivers/net/rtl819x/Makefile
++++ b/drivers/net/rtl819x/Makefile
+@@ -11,7 +11,7 @@
+ #obj-y := mmap.o
+ 
+ DIR_RTLASIC = $(DIR_LINUX)/drivers/net/rtl819x/
+-EXTRA_CFLAGS += -DCONFIG_RTL865X_MODULE_INTERNAL
++EXTRA_CFLAGS += -DCONFIG_RTL865X_MODULE_INTERNAL -I$(TOPDIR)/arch/rlx
+ 
+ #obj-y := rtl_glue.o
+ #Add mips16 Support

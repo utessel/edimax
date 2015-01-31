@@ -1,0 +1,43 @@
+diff -purbB --unidirectional-new-file -x '.*' -x '*.o' hostapd-rtk-0.6.10/hostapd/Makefile hostapd-0.6.10/hostapd/Makefile
+--- hostapd-rtk-0.6.10/hostapd/Makefile	2013-05-18 17:49:32.433577219 +0300
++++ hostapd-0.6.10/hostapd/Makefile	2013-05-02 01:48:29.296224179 +0300
+@@ -3,9 +3,11 @@ CC=gcc
+ endif
+ 
+ ifndef CFLAGS
+-CFLAGS = -MMD -O2 -Wall -g
++CFLAGS = -MMD -Wall -g
+ endif
+ 
++CFLAGS += -Os
++
+ # define HOSTAPD_DUMP_STATE to include SIGUSR1 handler for dumping state to
+ # a file (undefine it, if you want to save in binary size)
+ CFLAGS += -DHOSTAPD_DUMP_STATE
+diff -purbB --unidirectional-new-file -x '.*' -x '*.o' hostapd-rtk-0.6.10/src/utils/os_unix.c hostapd-0.6.10/src/utils/os_unix.c
+--- hostapd-rtk-0.6.10/src/utils/os_unix.c	2013-05-18 17:49:32.321577228 +0300
++++ hostapd-0.6.10/src/utils/os_unix.c	2013-05-02 01:48:29.767224141 +0300
+@@ -113,10 +113,11 @@ static int os_daemon(int nochdir, int no
+ 
+ int os_daemonize(const char *pid_file)
+ {
+-#ifdef __uClinux__
+-	return -1;
+-#else /* __uClinux__ */
+-	if (os_daemon(0, 1)) {
++#ifndef RTK_HAPD
++	if (daemon(0, 0)) {
++#else
++	if (daemon(0, 1)) {
++#endif
+ 		perror("daemon");
+ 		return -1;
+ 	}
+@@ -130,7 +131,6 @@ int os_daemonize(const char *pid_file)
+ 	}
+ 
+ 	return -0;
+-#endif /* __uClinux__ */
+ }
+ 
+ 
