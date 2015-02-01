@@ -15,6 +15,12 @@ https://forum.openwrt.org/viewtopic.php?id=46606
 
 Special thanks to Tomate for the hints I got to make this working.
 
+**Note**
+At this time, at least on my router, USB is not working.
+I have had a working USB Port and will update this repository
+when I have understood what needs to be done. (Or someone else
+is giving me the right information?)
+
 
 Openwrt on Edimax 3G-6200nL V2
 ------------------------------
