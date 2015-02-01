@@ -112,6 +112,9 @@ the capacitor. You can connect a 3.3V USB to TTL converter to these
 pins.
 The router uses 38400 Baud.
 
+Pressing ESC in the bootloader will interrupt it and you can upload
+your firmware-files with tftp to the device.
+
 GPIO Pins
 ---------
 
